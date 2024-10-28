@@ -124,6 +124,16 @@ def pytest_addoption(parser):
         "--ami-owner",
         help="Override the owner value when fetching AMIs to use with cluster. By default pcluster uses amazon.",
     )
+    parser.addoption(
+        "--available-amis-oss-x86",
+        help="(optional) set to available x86 AMIs OSes in the account. "
+        "If not specified, all supported OSes will be used.",
+    )
+    parser.addoption(
+        "--available-amis-oss-arm",
+        help="(optional) set to available ARM AMIs OSes in the account. "
+        "If not specified, all supported OSes will be used.",
+    )
     parser.addoption("--createami-custom-node-package", help="url to a custom node package for the build-image command")
     parser.addoption("--custom-awsbatch-template-url", help="url to a custom awsbatch template")
     parser.addoption("--cw-dashboard-template-url", help="url to a custom Dashboard cfn template")
@@ -240,7 +250,7 @@ def pytest_configure(config):
     """This hook is called for every plugin and initial conftest file after command line options have been parsed."""
     # read tests config file if used
     if config.getoption("tests_config_file", None):
-        config.option.tests_config = read_config_file(config.getoption("tests_config_file"))
+        config.option.tests_config = read_config_file(config.getoption("tests_config_file"), config=config)
 
     # Read instance types data file if used
     if config.getoption("instance_types_data_file", None):
@@ -568,7 +578,7 @@ def test_datadir(request, datadir):
 
 
 @pytest.fixture()
-def pcluster_config_reader(test_datadir, vpc_stack, request, region):
+def pcluster_config_reader(test_datadir, vpc_stack, request, region, architecture):
     """
     Define a fixture to render pcluster config templates associated to the running test.
 
@@ -595,7 +605,7 @@ def pcluster_config_reader(test_datadir, vpc_stack, request, region):
         rendered_template = env.get_template(config_file).render(**{**default_values, **kwargs})
         output_file_path.write_text(rendered_template)
         if not config_file.endswith("image.config.yaml"):
-            inject_additional_config_settings(output_file_path, request, region, benchmarks)
+            inject_additional_config_settings(output_file_path, request, region, architecture, benchmarks)
         else:
             inject_additional_image_configs_settings(output_file_path, request)
         return output_file_path
@@ -662,7 +672,7 @@ def _inject_additional_iam_policies_for_nodes(
             _inject_additional_iam_policies(pool, policies)
 
 
-def inject_additional_config_settings(cluster_config, request, region, benchmarks=None):  # noqa C901
+def inject_additional_config_settings(cluster_config, request, region, architecture, benchmarks=None):  # noqa C901
     with open(cluster_config, encoding="utf-8") as conf_file:
         config_content = yaml.safe_load(conf_file)
 
@@ -698,6 +708,7 @@ def inject_additional_config_settings(cluster_config, request, region, benchmark
                 region,
                 config_content["Image"]["Os"],
                 ami_type="pcluster",
+                architecture=architecture,
             ),
             ("Image", "CustomAmi"),
         )
