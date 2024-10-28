@@ -66,6 +66,9 @@ class ExportImageLogsCommand(ExportLogsCommand, CliCommand):
             is_pcluster_bucket = not args.bucket
 
             if is_pcluster_bucket:
+                # Validate the bucket prefix for both the default pcluster bucket
+                # and CustomS3Bucket if specified in the image configuration.
+                # Skip validation if a bucket is specified via the --bucket CLI argument.
                 self._validate_bucket_prefix(args.bucket_prefix)
 
             return self._export_image_logs(args, args.output_file)
@@ -81,7 +84,7 @@ class ExportImageLogsCommand(ExportLogsCommand, CliCommand):
                 or bucket_prefix == PCLUSTER_BUCKET_PROTECTED_FOLDER
             ):
                 raise ValueError(
-                    f"Cannot export logs to {bucket_prefix} as it is a protected folder "
+                    f"Cannot export logs to {bucket_prefix} as it is within a protected folder "
                     f"in {PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder."
                 )
 

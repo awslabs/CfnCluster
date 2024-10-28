@@ -23,7 +23,7 @@ import yaml
 
 from pcluster.aws.aws_api import AWSApi
 from pcluster.aws.common import AWSClientError, get_region
-from pcluster.constants import PCLUSTER_S3_BUCKET_VERSION
+from pcluster.constants import PCLUSTER_BUCKET_REQUIRED_BOOTSTRAP_FEATURES, PCLUSTER_S3_BUCKET_VERSION
 from pcluster.utils import format_arn, get_partition, get_service_principal, get_url_domain_suffix, yaml_load, zip_dir
 
 LOGGER = logging.getLogger(__name__)
@@ -49,8 +49,6 @@ class S3FileType(Enum):
 
 class S3Bucket:
     """Represent the s3 bucket configuration."""
-
-    REQUIRED_BOOTSTRAP_FEATURES = ["basic", "export-logs"]
 
     def __init__(
         self,
@@ -270,9 +268,9 @@ class S3Bucket:
                     str(e),
                 )
 
-    def upload_bootstrapped_file(self, bootstrapped_features):
+    def upload_bootstrapped_file(self):
         """Upload bootstrapped file to identify bucket is configured successfully."""
-        bootstrapped_content = json.dumps({"bootstrapped_features": bootstrapped_features})
+        bootstrapped_content = json.dumps({"bootstrapped_features": PCLUSTER_BUCKET_REQUIRED_BOOTSTRAP_FEATURES})
         AWSApi.instance().s3.put_object(
             bucket_name=self.name,
             body=bootstrapped_content,
@@ -291,19 +289,20 @@ class S3Bucket:
                 bootstrapped_info = json.loads(file_content)
                 bootstrapped_features = bootstrapped_info.get("bootstrapped_features", [])
             except json.JSONDecodeError:
+                # The bootstrap file old format is a simple String "bucket is configured successfully."
                 LOGGER.info("Bootstrap file is in old format. Assuming basic features are bootstrapped.")
-                bootstrapped_features = ["basic"]
+                bootstrapped_features = [PCLUSTER_BUCKET_REQUIRED_BOOTSTRAP_FEATURES[0]]
 
-            for feature in self.REQUIRED_BOOTSTRAP_FEATURES:
+            for feature in PCLUSTER_BUCKET_REQUIRED_BOOTSTRAP_FEATURES:
                 if feature not in bootstrapped_features:
                     return False
             return True
         except AWSClientError as e:
             if e.error_code == "404":
-                LOGGER.info("Bootstrap file doesn't exist. S3 Bucket %s is not configured.", self.name)
+                LOGGER.warning("Bootstrap file doesn't exist. S3 Bucket %s is not configured.", self.name)
                 return False
             else:
-                LOGGER.error("Unable to check S3 bucket %s is configured properly.", self.name)
+                LOGGER.error("Unable to check if S3 bucket %s is configured properly.", self.name)
                 raise e
 
     def upload_config(self, config, config_name, format=S3FileFormat.YAML):
@@ -482,7 +481,7 @@ class S3BucketFactory:
     def _configure_bucket(cls, bucket: S3Bucket):
         try:
             bucket.configure_s3_bucket()
-            bucket.upload_bootstrapped_file(bootstrapped_features=bucket.REQUIRED_BOOTSTRAP_FEATURES)
+            bucket.upload_bootstrapped_file()
         except AWSClientError as error:
             LOGGER.error("Configure S3 bucket %s failed.", bucket.name)
             raise error
