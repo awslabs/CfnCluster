@@ -50,7 +50,7 @@ test-suites:
           schedulers: {{ common.SCHEDULERS_TRAD }}
         - regions: ["us-gov-east-1"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
-          oss: [{{ OS_X86_2 }}]
+          oss: ["alinux2"]
           schedulers: ["awsbatch"]
         # 2) run the test for all OSes with slurm
         - regions: ["ap-east-1"]
