@@ -91,6 +91,7 @@ test-suites:
         - regions: ["eu-north-1"] # must be regions that do not have t2.micro
           oss: [{{ OS_X86_5 }}]
           schedulers: ["slurm"]
+          instances: ["t3.micro"]
     test_pcluster_configure.py::test_efa_and_placement_group:
       dimensions:
         - regions: ["us-west-2"]
