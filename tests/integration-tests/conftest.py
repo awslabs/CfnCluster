@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import time
 from functools import partial
 from itertools import product
 from shutil import copyfile
@@ -478,6 +479,7 @@ def api_server_factory(
                 )
                 cfn_stacks_factory.create_stack(stack)
                 api_servers[server_region] = stack
+                time.sleep(15)
             else:
                 logging.info(f"Found cached API Server stack: {api_stack_name} in {server_region}")
 
