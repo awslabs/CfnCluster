@@ -87,6 +87,7 @@ def mock_bucket_object_utils(
     delete_s3_artifacts_side_effect=None,
     upload_bootstrapped_file_side_effect=None,
     check_bucket_is_bootstrapped_side_effect=None,
+    check_bucket_is_bootstrapped_return_value=None,
 ):
     # mock call from config
     fake_config = {"Image": "image"}
@@ -128,6 +129,7 @@ def mock_bucket_object_utils(
     check_bucket_is_bootstrapped_mock = mocker.patch(
         "pcluster.models.s3_bucket.S3Bucket.check_bucket_is_bootstrapped",
         side_effect=check_bucket_is_bootstrapped_side_effect,
+        return_value=check_bucket_is_bootstrapped_return_value,
     )
 
     mock_dict = {

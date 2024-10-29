@@ -280,6 +280,10 @@ class S3Bucket:
     def check_bucket_is_bootstrapped(self):
         """Check if the bucket is configured successfully by reading the bootstrapped file."""
         try:
+            # head_object first to check if the object exist so that it can correctly catch `404` error_code
+            AWSApi.instance().s3.head_object(
+                bucket_name=self.name, object_name="/".join([self._root_directory, self._bootstrapped_file_name])
+            )
             response = AWSApi.instance().s3.get_object(
                 bucket_name=self.name,
                 key="/".join([self._root_directory, self._bootstrapped_file_name]),

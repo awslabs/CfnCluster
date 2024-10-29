@@ -10,11 +10,15 @@
 # limitations under the License.
 
 """This module provides unit tests for the functions in the pcluster.commands module."""
+import json
+from unittest.mock import Mock
+
 import pytest
 from assertpy import assert_that
 
 from pcluster.aws.common import AWSClientError
 from pcluster.models.cluster import ClusterActionError, ClusterStack
+from pcluster.models.s3_bucket import S3Bucket
 from tests.pcluster.aws.dummy_aws_api import mock_aws_api
 from tests.pcluster.config.dummy_cluster_config import dummy_awsbatch_cluster_config, dummy_slurm_cluster_config
 from tests.pcluster.models.dummy_s3_bucket import mock_bucket, mock_bucket_object_utils, mock_bucket_utils
@@ -224,13 +228,15 @@ def test_setup_bucket_with_resources_creation_failure(
 @pytest.mark.parametrize(
     (
         "check_bucket_is_bootstrapped_error",
+        "check_bucket_is_bootstrapped_return_value",
         "bucket_configure_error",
         "upload_bootstrapped_file_error",
         "cluster_action_error",
     ),
     [
         (
-            AWSClientError(function_name="head_object", message="No object", error_code="404"),
+            None,
+            False,
             AWSClientError(function_name="put_bucket_versioning", message="No put bucket versioning policy"),
             None,
             "Unable to initialize s3 bucket. No put bucket versioning policy",
@@ -239,10 +245,12 @@ def test_setup_bucket_with_resources_creation_failure(
             AWSClientError(function_name="head_object", message="NoSuchBucket", error_code="403"),
             None,
             None,
+            None,
             "NoSuchBucket",
         ),
         (
-            AWSClientError(function_name="head_object", message="No object", error_code="404"),
+            None,
+            False,
             None,
             AWSClientError(function_name="put_object", message="No put object policy"),
             "No put object policy",
@@ -252,6 +260,7 @@ def test_setup_bucket_with_resources_creation_failure(
 def test_setup_bucket_with_bucket_configuration_failure(
     mocker,
     check_bucket_is_bootstrapped_error,
+    check_bucket_is_bootstrapped_return_value,
     bucket_configure_error,
     upload_bootstrapped_file_error,
     cluster_action_error,
@@ -271,6 +280,7 @@ def test_setup_bucket_with_bucket_configuration_failure(
         mocker,
         check_bucket_is_bootstrapped_side_effect=check_bucket_is_bootstrapped_error,
         upload_bootstrapped_file_side_effect=upload_bootstrapped_file_error,
+        check_bucket_is_bootstrapped_return_value=check_bucket_is_bootstrapped_return_value,
     )
 
     with pytest.raises(ClusterActionError, match=cluster_action_error):
@@ -333,3 +343,101 @@ def test_setup_bucket_with_resources_upload_failure(
         cluster._upload_instance_types_data()
 
     check_bucket_mock.assert_called_with()
+
+
+@pytest.mark.parametrize(
+    (
+        "head_object_side_effect",
+        "get_object_side_effect",
+        "get_object_return_value",
+        "expected_result",
+        "expected_exception",
+    ),
+    [
+        # Test case 1: The bootstrap file exists, content is in the new format, and contains all required features
+        (
+            None,
+            None,
+            {
+                "Body": Mock(
+                    read=Mock(
+                        return_value=json.dumps({"bootstrapped_features": ["basic", "export-logs"]}).encode("utf-8")
+                    )
+                )
+            },
+            True,
+            None,
+        ),
+        # Test case 2: The bootstrap file exists, content is in the new format, but some required features are missing
+        (
+            None,
+            None,
+            {"Body": Mock(read=Mock(return_value=json.dumps({"bootstrapped_features": ["basic"]}).encode("utf-8")))},
+            False,
+            None,
+        ),
+        # Test case 3: The bootstrap file exists, content is in old format (not JSON string)
+        (
+            None,
+            None,
+            {"Body": Mock(read=Mock(return_value="bucket is configured successfully.".encode("utf-8")))},
+            False,
+            None,
+        ),
+        # Test case 4: The bootstrap file does not exist (head_object throws 404 error)
+        (
+            AWSClientError(function_name="head_object", message="Not Found", error_code="404"),
+            None,
+            None,
+            False,
+            None,
+        ),
+        # Test Case 5: get_object throws AWSClientError (not a 404 error)
+        (
+            None,
+            AWSClientError(function_name="get_object", message="Access Denied", error_code="403"),
+            None,
+            None,
+            AWSClientError,
+        ),
+        # Test case 6: The bootstrap file content cannot be parsed as JSON
+        (
+            None,
+            None,
+            {"Body": Mock(read=Mock(return_value="{invalid json}".encode("utf-8")))},
+            False,
+            None,
+        ),
+    ],
+)
+def test_check_bucket_is_bootstrapped(
+    mocker,
+    head_object_side_effect,
+    get_object_side_effect,
+    get_object_return_value,
+    expected_result,
+    expected_exception,
+):
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+
+    mocker.patch("pcluster.aws.s3.S3Client.head_object", side_effect=head_object_side_effect)
+
+    mocker.patch(
+        "pcluster.aws.s3.S3Client.get_object",
+        side_effect=get_object_side_effect,
+        return_value=get_object_return_value,
+    )
+
+    if expected_exception:
+        with pytest.raises(expected_exception):
+            bucket.check_bucket_is_bootstrapped()
+    else:
+        result = bucket.check_bucket_is_bootstrapped()
+        assert_that(result).is_equal_to(expected_result)
