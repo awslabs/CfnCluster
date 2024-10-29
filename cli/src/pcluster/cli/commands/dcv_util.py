@@ -9,9 +9,7 @@
 # OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pcluster.constants import SUPPORTED_OSES
-
-UNSUPPORTED_OSES_FOR_DCV = ["alinux2023"]
+from pcluster.constants import SUPPORTED_OSES, UNSUPPORTED_OSES_FOR_DCV
 
 
 def get_supported_dcv_os(architecture):

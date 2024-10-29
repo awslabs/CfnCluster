@@ -26,6 +26,7 @@ SCHEDULERS_SUPPORTING_IMDS_SECURED = ["slurm"]
 SUPPORTED_OSES = ["alinux2", "alinux2023", "ubuntu2004", "ubuntu2204", "rhel8", "rocky8", "rhel9", "rocky9"]
 SUPPORTED_OSES_FOR_SCHEDULER = {"slurm": SUPPORTED_OSES, "awsbatch": ["alinux2", "alinux2023"]}
 UNSUPPORTED_OSES_FOR_MICRO_NANO = ["ubuntu2004", "ubuntu2204", "rhel8", "rocky8", "rhel9", "rocky9"]
+UNSUPPORTED_OSES_FOR_DCV = ["alinux2023"]
 DELETE_POLICY = "Delete"
 RETAIN_POLICY = "Retain"
 DELETION_POLICIES = [DELETE_POLICY, RETAIN_POLICY]
