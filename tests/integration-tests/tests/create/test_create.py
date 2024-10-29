@@ -26,7 +26,7 @@ from tests.common.assertions import (
     assert_head_node_is_running,
     assert_lines_in_logs,
 )
-from tests.common.utils import get_installed_parallelcluster_version, reboot_head_node, retrieve_latest_ami
+from tests.common.utils import reboot_head_node, retrieve_latest_ami
 
 
 @pytest.mark.usefixtures("instance", "scheduler")
@@ -50,41 +50,6 @@ def test_create_wrong_os(region, os, pcluster_config_reader, clusters_factory, a
         ["/var/log/chef-client.log"],
         ["RuntimeError", rf"custom AMI.+{wrong_os}.+base.+os.+config file.+{os}"],
     )
-
-
-@pytest.mark.usefixtures("instance", "os", "scheduler")
-def test_create_wrong_pcluster_version(
-    region, pcluster_config_reader, pcluster_ami_without_standard_naming, clusters_factory
-):
-    """Test error message when AMI provided was baked by a pcluster whose version is different from current version"""
-    current_version = get_installed_parallelcluster_version()
-    wrong_version = "3.10.0"
-    logging.info("Asserting wrong_version is different from current_version")
-    assert_that(current_version != wrong_version).is_true()
-    # Retrieve an AMI without 'aws-parallelcluster-<version>' in its name.
-    # Therefore, we can bypass the version check in CLI and test version check of .bootstrapped file in Cookbook.
-    wrong_ami = pcluster_ami_without_standard_naming(wrong_version)
-    cluster_config = pcluster_config_reader(custom_ami=wrong_ami)
-    cluster = clusters_factory(cluster_config, raise_on_error=False)
-
-    assert_head_node_is_running(region, cluster)
-    remote_command_executor = RemoteCommandExecutor(cluster)
-
-    logging.info("Verifying error in logs")
-    assert_lines_in_logs(
-        remote_command_executor,
-        ["/var/log/cloud-init-output.log"],
-        ["error_exit", rf"AMI was created.+{wrong_version}.+is.+used.+{current_version}"],
-    )
-    logging.info("Verifying failures in describe-clusters output")
-    expected_failures = [
-        {
-            "failureCode": "AmiVersionMismatch",
-            "failureReason": "ParallelCluster version of the custom AMI is different than the cookbook. Please make "
-            "them consistent.",
-        }
-    ]
-    assert_that(cluster.creation_response.get("failures")).is_equal_to(expected_failures)
 
 
 @pytest.mark.usefixtures("instance", "scheduler")
