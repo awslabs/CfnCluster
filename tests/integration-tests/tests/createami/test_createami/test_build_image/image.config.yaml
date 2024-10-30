@@ -15,6 +15,7 @@ Build:
         - Key: dummyBuildTag
           Value: dummyBuildTag
 {% if os in ["alinux2", "alinux2023"] %}
+# Use UpdateOSPackages for alinux is optional. Use UpdateOSPackages on Ubuntu, RHEL/Rocky is not recommended because it intermittently fails because of kernel issues.
     UpdateOsPackages:
         Enabled: true
 {% endif %}
