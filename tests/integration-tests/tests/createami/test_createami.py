@@ -123,11 +123,15 @@ def test_build_image(
     bucket_name = s3_bucket_factory()
 
     # Get base AMI
-    # remarkable AMIs are not available for ARM and ubuntu2204 yet
-    if os not in ["ubuntu2204", "alinux2023"]:
+    if os in ["alinux2", "ubuntu2004"]:
+        # Test Deep Learning AMIs
         base_ami = retrieve_latest_ami(region, os, ami_type="remarkable", architecture=architecture)
+    elif "rhel" in os or "rocky" in os or "ubuntu" in os:
+        # Test AMIs from first stage build. Because RHEL/Rocky and Ubuntu have specific requirement of kernel versions.
+        base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
     else:
-        base_ami = retrieve_latest_ami(region, os, architecture=architecture)
+        # Test vanilla AMIs.
+        base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
 
     image_config = pcluster_config_reader(
         config_file="image.config.yaml", parent_image=base_ami, instance_role=instance_role, bucket_name=bucket_name
