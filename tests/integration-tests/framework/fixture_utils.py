@@ -221,8 +221,10 @@ def xdist_session_fixture(**pytest_fixture_args):
                 fixture_func_kwargs=kwargs,
                 xdist_worker_id_and_pid=f"{xdist_worker_id}: {pid}",
             )
-            yield shared_fixture.acquire().fixture_return_value
-            shared_fixture.release()
+            try:
+                yield shared_fixture.acquire().fixture_return_value
+            finally:
+                shared_fixture.release()
 
         return _xdist_session_fixture
 
