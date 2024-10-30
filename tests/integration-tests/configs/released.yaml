@@ -83,11 +83,11 @@ test-suites:
         - regions: ["eu-west-3"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
           schedulers: [ "slurm" ]
-          oss: {{ common.OSS_COMMERCIAL_X86 }}
-        - regions: ["eu-west-3"]
+          oss: ["ubuntu2004", "alinux2", "alinux2023"]
+        - regions: ["us-east-1"] # This region has to have first stage AMIs.
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
           schedulers: ["slurm"]
-          oss: ["rocky8"]
+          oss: ["rocky8", "rhel8", "rhel9", "rocky9", "ubuntu2204"]
         - regions: ["cn-north-1"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
           schedulers: ["slurm"]

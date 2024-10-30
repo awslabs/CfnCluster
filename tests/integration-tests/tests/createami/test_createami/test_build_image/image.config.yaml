@@ -14,8 +14,10 @@ Build:
     Tags:
         - Key: dummyBuildTag
           Value: dummyBuildTag
+{% if os in ["alinux2", "alinux2023"] %}
     UpdateOsPackages:
         Enabled: true
+{% endif %}
 
 CustomS3Bucket: {{ bucket_name }}
 
