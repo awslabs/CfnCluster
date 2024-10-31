@@ -434,7 +434,7 @@ Resources:
                 echo "[DEBUG] Resolving ${DirectoryDomain} ..."
                 dig ${DirectoryDomain} 
                 echo "Joining domain (attempt $attempt/$max_attempts) ..."
-                echo "$ADMIN_PW" | sudo realm join -U "${Admin}" "${DirectoryDomain}" && echo "Domain joined" && break
+                echo "$ADMIN_PW" | sudo realm join -U "${Admin}" "${DirectoryDomain} --verbose" && echo "Domain joined" && break
                 sleep 10
               done
               
