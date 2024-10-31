@@ -1042,7 +1042,7 @@ def external_shared_storage_stack(request, test_datadir, region, vpc_stack: CfnV
                 {"ParameterKey": "Vpc", "ParameterValue": vpc},
                 {"ParameterKey": "SubnetOne", "ParameterValue": one_subnet_per_az[0]},
                 {"ParameterKey": "SubnetTwo", "ParameterValue": one_subnet_per_az[1]},
-                {"ParameterKey": "SubnetThree", "ParameterValue": one_subnet_per_az[2 % len(azs)]},
+                {"ParameterKey": "SubnetThree", "ParameterValue": '' if len(one_subnet_per_az)==2 else one_subnet_per_az[2]},
                 # EBS
                 {"ParameterKey": "CreateEbs", "ParameterValue": "true"},
                 {"ParameterKey": "EbsVolumeAz", "ParameterValue": ebs_volume_az},
