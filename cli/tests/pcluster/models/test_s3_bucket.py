@@ -16,8 +16,9 @@ from assertpy import assert_that
 
 from pcluster.aws.common import AWSClientError
 from pcluster.models.s3_bucket import S3Bucket, S3FileFormat, S3FileType, format_content
+from pcluster.utils import format_arn, get_service_principal
 from tests.pcluster.aws.dummy_aws_api import mock_aws_api
-from tests.pcluster.models.dummy_s3_bucket import dummy_cluster_bucket, mock_bucket
+from tests.pcluster.models.dummy_s3_bucket import dummy_cluster_bucket, mock_bucket, mock_bucket_utils
 
 
 @pytest.mark.parametrize(
@@ -301,3 +302,127 @@ def test_upload_file(mocker, content, file_name, file_type, s3_file_format, expe
         body=expected_object_body,
         key=f"{artifact_directory}/{expected_object_key}",
     )
+
+
+def test_get_bucket_policy_for_cloudwatch_logs(mocker):
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+
+    partition = "fake_partition"
+    region = "fake-region"
+    account_id = "fake-id"
+    bucket_name = bucket.name
+
+    bucket_arn = format_arn(partition, "s3", "", "", bucket_name)
+    bucket_arn_with_wildcard = f"{bucket_arn}/*"
+    logs_service_principal = get_service_principal(
+        service_name="logs", partition=partition, region=region, regional=True
+    )
+
+    log_group_arns = [
+        format_arn(partition, "logs", region, account_id, "log-group:/aws/parallelcluster/*"),
+        format_arn(partition, "logs", region, account_id, "log-group:/aws/imagebuilder/*"),
+    ]
+
+    policy_statements = bucket._get_bucket_policy_for_cloudwatch_logs()
+
+    assert_that(policy_statements).is_length(3)
+
+    statements_by_sid = {statement["Sid"]: statement for statement in policy_statements}
+
+    # Verify AllowReadBucketAclForExportLogs policy
+    read_acl_statement = statements_by_sid.get("AllowReadBucketAclForExportLogs")
+    assert_that(read_acl_statement).is_not_none()
+    assert_that(read_acl_statement["Action"]).is_equal_to("s3:GetBucketAcl")
+    assert_that(read_acl_statement["Effect"]).is_equal_to("Allow")
+    assert_that(read_acl_statement["Resource"]).is_equal_to(bucket_arn)
+    assert_that(read_acl_statement["Principal"]).is_equal_to({"Service": logs_service_principal})
+    assert_that(read_acl_statement["Condition"]).is_equal_to(
+        {
+            "StringEquals": {"aws:SourceAccount": account_id},
+            "ArnLike": {"aws:SourceArn": log_group_arns},
+        }
+    )
+
+    # Verify AllowPutObjectForExportLogs policy
+    put_object_statement = statements_by_sid.get("AllowPutObjectForExportLogs")
+    assert_that(put_object_statement).is_not_none()
+    assert_that(put_object_statement["Action"]).is_equal_to("s3:PutObject")
+    assert_that(put_object_statement["Effect"]).is_equal_to("Allow")
+    assert_that(put_object_statement["Resource"]).is_equal_to(bucket_arn_with_wildcard)
+    assert_that(put_object_statement["Principal"]).is_equal_to({"Service": logs_service_principal})
+    assert_that(put_object_statement["Condition"]).is_equal_to(
+        {
+            "StringEquals": {
+                "s3:x-amz-acl": "bucket-owner-full-control",
+                "aws:SourceAccount": account_id,
+            },
+            "ArnLike": {"aws:SourceArn": log_group_arns},
+        }
+    )
+
+    # Verify DenyPutObjectOnReservedPath policy
+    deny_put_object_statement = statements_by_sid.get("DenyPutObjectOnReservedPath")
+    assert_that(deny_put_object_statement).is_not_none()
+    assert_that(deny_put_object_statement["Action"]).is_equal_to("s3:PutObject")
+    assert_that(deny_put_object_statement["Effect"]).is_equal_to("Deny")
+    assert_that(deny_put_object_statement["Resource"]).is_equal_to(f"{bucket_arn}/parallelcluster/*")
+    assert_that(deny_put_object_statement["Principal"]).is_equal_to({"Service": logs_service_principal})
+
+
+def test_generate_bucket_policy(mocker):
+    """Test _generate_bucket_policy method."""
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+    bucket_name = bucket.name
+
+    # Mock _get_bucket_policy_for_cloudwatch_logs
+    mock_logs_policy_statements = [
+        {"Sid": "MockStatement1", "Action": "s3:MockAction1"},
+        {"Sid": "MockStatement2", "Action": "s3:MockAction2"},
+    ]
+    mocker.patch(
+        "pcluster.models.s3_bucket.S3Bucket._get_bucket_policy_for_cloudwatch_logs",
+        return_value=mock_logs_policy_statements,
+    )
+
+    # Expected values
+    partition = "fake_partition"
+    bucket_arn = format_arn(partition, "s3", "", "", bucket_name)
+    bucket_arn_with_wildcard = f"{bucket_arn}/*"
+
+    bucket_policy = bucket._generate_bucket_policy()
+
+    # Verify bucket_policy
+    assert_that(bucket_policy["Version"]).is_equal_to("2012-10-17")
+    assert_that(bucket_policy).contains("Statement")
+    statements = bucket_policy["Statement"]
+
+    # There should be one DenyHTTP policy and the mocked logs_policy_statements
+    assert_that(statements).is_length(1 + len(mock_logs_policy_statements))
+
+    # Verify DenyHTTP policy
+    deny_http_statement = statements[0]
+    assert_that(deny_http_statement["Sid"]).is_equal_to("AllowSSLRequestsOnly")
+    assert_that(deny_http_statement["Effect"]).is_equal_to("Deny")
+    assert_that(deny_http_statement["Principal"]).is_equal_to("*")
+    assert_that(deny_http_statement["Action"]).is_equal_to("s3:*")
+    assert_that(deny_http_statement["Resource"]).is_equal_to([bucket_arn, bucket_arn_with_wildcard])
+    assert_that(deny_http_statement["Condition"]).is_equal_to({"Bool": {"aws:SecureTransport": "false"}})
+
+    # Verify the mocked logs_policy_statements is contained
+    assert_that(statements[1:]).is_equal_to(mock_logs_policy_statements)

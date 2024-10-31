@@ -41,6 +41,6 @@ options:
   --bucket-prefix BUCKET_PREFIX
                         Keypath under which exported logs data will be stored
                         in s3 bucket. Defaults to <image_id>-logs-<current
-                        time in the format of yyyyMMddHHmm>. If not specify
+                        time in the format of yyyyMMddHHmm>. If not specified
                         `--bucket` option, cannot export logs to
                         parallelcluster/ as it is a protected folder.

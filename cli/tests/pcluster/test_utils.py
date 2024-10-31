@@ -607,3 +607,114 @@ class TestAsyncUtils(unittest.TestCase):
 def test_is_feature_supported(feature, region, expected_result):
     actual_result = utils.is_feature_supported(feature=feature, region=region)
     assert_that(actual_result).is_equal_to(expected_result)
+
+
+@pytest.mark.parametrize(
+    "service_name, partition, region, regional, expected_result, expected_exception",
+    [
+        pytest.param(
+            "logs",
+            "aws",
+            None,
+            False,
+            "logs.amazonaws.com",
+            None,
+            id="Non-regional service principal in aws partition",
+        ),
+        pytest.param(
+            "logs",
+            "aws",
+            "us-east-1",
+            True,
+            "logs.us-east-1.amazonaws.com",
+            None,
+            id="Regional service principal in aws partition",
+        ),
+        pytest.param(
+            "logs",
+            "aws",
+            None,
+            True,
+            None,
+            ValueError("Region must be provided when 'regional' is True."),
+            id="Regional=True without region provided",
+        ),
+        pytest.param(
+            "logs",
+            "aws-cn",
+            None,
+            False,
+            "logs.amazonaws.com.cn",
+            None,
+            id="Non-regional service principal in aws-cn partition",
+        ),
+        pytest.param(
+            "logs",
+            "aws-cn",
+            "cn-north-1",
+            True,
+            "logs.cn-north-1.amazonaws.com.cn",
+            None,
+            id="Regional service principal in aws-cn partition",
+        ),
+    ],
+)
+def test_get_service_principal(mocker, service_name, partition, region, regional, expected_result, expected_exception):
+    """Test get_service_principal with various inputs."""
+    # Mock get_url_domain_suffix
+    domain_suffix = "amazonaws.com.cn" if partition == "aws-cn" else "amazonaws.com"
+    mocker.patch("pcluster.utils.get_url_domain_suffix", return_value=domain_suffix)
+
+    if expected_exception:
+        with pytest.raises(ValueError, match=str(expected_exception)):
+            utils.get_service_principal(service_name, partition, region, regional)
+    else:
+        result = utils.get_service_principal(service_name, partition, region, regional)
+        assert_that(result).is_equal_to(expected_result)
+
+
+@pytest.mark.parametrize(
+    "partition, service, region, account, resource, expected_result",
+    [
+        pytest.param(
+            "aws",
+            "s3",
+            "us-east-1",
+            "123456789012",
+            "bucket_name",
+            "arn:aws:s3:us-east-1:123456789012:bucket_name",
+            id="All fields provided",
+        ),
+        pytest.param(
+            "aws",
+            "s3",
+            "",
+            "123456789012",
+            "bucket_name",
+            "arn:aws:s3::123456789012:bucket_name",
+            id="Empty region",
+        ),
+        pytest.param(
+            "aws",
+            "s3",
+            "us-east-1",
+            "",
+            "bucket_name",
+            "arn:aws:s3:us-east-1::bucket_name",
+            id="Empty account",
+        ),
+        pytest.param(
+            "aws",
+            "s3",
+            "",
+            "",
+            "bucket_name",
+            "arn:aws:s3:::bucket_name",
+            id="Empty region and account",
+        ),
+    ],
+)
+def test_format_arn(partition, service, region, account, resource, expected_result):
+    """Test format_arn with various inputs."""
+    result = utils.format_arn(partition, service, region, account, resource)
+    assert_that(result).is_equal_to(expected_result)

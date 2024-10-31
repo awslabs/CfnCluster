@@ -354,59 +354,75 @@ def test_setup_bucket_with_resources_upload_failure(
         "expected_exception",
     ),
     [
-        # Test case 1: The bootstrap file exists, content is in the new format, and contains all required features
         (
-            None,
-            None,
-            {
-                "Body": Mock(
-                    read=Mock(
-                        return_value=json.dumps({"bootstrapped_features": ["basic", "export-logs"]}).encode("utf-8")
+            pytest.param(
+                None,
+                None,
+                {
+                    "Body": Mock(
+                        read=Mock(
+                            return_value=json.dumps({"bootstrapped_features": ["basic", "export-logs"]}).encode("utf-8")
+                        )
                     )
-                )
-            },
-            True,
-            None,
+                },
+                True,
+                None,
+                id="The bootstrap file exists, content is in the new format, and contains all required features",
+            )
         ),
-        # Test case 2: The bootstrap file exists, content is in the new format, but some required features are missing
         (
-            None,
-            None,
-            {"Body": Mock(read=Mock(return_value=json.dumps({"bootstrapped_features": ["basic"]}).encode("utf-8")))},
-            False,
-            None,
+            pytest.param(
+                None,
+                None,
+                {
+                    "Body": Mock(
+                        read=Mock(return_value=json.dumps({"bootstrapped_features": ["basic"]}).encode("utf-8"))
+                    )
+                },
+                False,
+                None,
+                id="The bootstrap file exists, content is in the new format, but some required features are missing",
+            )
         ),
-        # Test case 3: The bootstrap file exists, content is in old format (not JSON string)
         (
-            None,
-            None,
-            {"Body": Mock(read=Mock(return_value="bucket is configured successfully.".encode("utf-8")))},
-            False,
-            None,
+            pytest.param(
+                None,
+                None,
+                {"Body": Mock(read=Mock(return_value="bucket is configured successfully.".encode("utf-8")))},
+                False,
+                None,
+                id="The bootstrap file exists, content is in old format (not JSON string)",
+            )
         ),
-        # Test case 4: The bootstrap file does not exist (head_object throws 404 error)
         (
-            AWSClientError(function_name="head_object", message="Not Found", error_code="404"),
-            None,
-            None,
-            False,
-            None,
+            pytest.param(
+                AWSClientError(function_name="head_object", message="Not Found", error_code="404"),
+                None,
+                None,
+                False,
+                None,
+                id="The bootstrap file does not exist (head_object throws 404 error)",
+            )
         ),
-        # Test Case 5: get_object throws AWSClientError (not a 404 error)
         (
-            None,
-            AWSClientError(function_name="get_object", message="Access Denied", error_code="403"),
-            None,
-            None,
-            AWSClientError,
+            pytest.param(
+                None,
+                AWSClientError(function_name="get_object", message="Access Denied", error_code="403"),
+                None,
+                None,
+                AWSClientError,
+                id="get_object throws AWSClientError (not a 404 error)",
+            )
         ),
-        # Test case 6: The bootstrap file content cannot be parsed as JSON
         (
-            None,
-            None,
-            {"Body": Mock(read=Mock(return_value="{invalid json}".encode("utf-8")))},
-            False,
-            None,
+            pytest.param(
+                None,
+                None,
+                {"Body": Mock(read=Mock(return_value="{invalid json}".encode("utf-8")))},
+                False,
+                None,
+                id="The bootstrap file content cannot be parsed as JSON",
+            )
         ),
     ],
 )

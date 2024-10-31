@@ -87,7 +87,7 @@ def mock_bucket_object_utils(
     delete_s3_artifacts_side_effect=None,
     upload_bootstrapped_file_side_effect=None,
     check_bucket_is_bootstrapped_side_effect=None,
-    check_bucket_is_bootstrapped_return_value=None,
+    check_bucket_is_bootstrapped_return_value=True,
 ):
     # mock call from config
     fake_config = {"Image": "image"}

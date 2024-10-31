@@ -49,7 +49,7 @@ class ExportClusterLogsCommand(ExportLogsCommand, CliCommand):
         parser.add_argument(
             "--bucket-prefix",
             help="Keypath under which exported logs data will be stored in s3 bucket. Defaults to "
-            "<cluster_name>-logs-<current time in the format of yyyyMMddHHmm>, If not specify `--bucket` option, "
+            "<cluster_name>-logs-<current time in the format of yyyyMMddHHmm>. If not specified `--bucket` option, "
             f"cannot export logs to {PCLUSTER_BUCKET_PROTECTED_PREFIX} as it is a protected folder.",
         )
         super()._register_common_command_args(parser)
@@ -92,8 +92,8 @@ class ExportClusterLogsCommand(ExportLogsCommand, CliCommand):
                 or bucket_prefix == PCLUSTER_BUCKET_PROTECTED_FOLDER
             ):
                 raise ValueError(
-                    f"Cannot export logs to {bucket_prefix} as it is within a protected folder "
-                    f"in {PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder."
+                    f"Cannot export logs to {bucket_prefix} as it is within the protected folder "
+                    f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder."
                 )
 
     @staticmethod
