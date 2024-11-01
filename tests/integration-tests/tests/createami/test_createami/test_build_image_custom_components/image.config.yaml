@@ -6,7 +6,7 @@ Build:
     # Test script custom component with combination (ap-southeast-2, c5.xlarge, centos7) and (ap-southeast-2, c5.xlarge, ubuntu2004)
     {% if region == "eu-west-1" %}
     - Type: arn
-      Value: arn:aws:imagebuilder:eu-west-1:aws:component/docker-ce-linux/1.0.0
+      Value: arn:aws:imagebuilder:eu-west-1:aws:component/stig-build-linux-high/2024.2.3/1
     {% else %}
     - Type: script
       Value: s3://{{ bucket_name }}/scripts/custom_script.sh
