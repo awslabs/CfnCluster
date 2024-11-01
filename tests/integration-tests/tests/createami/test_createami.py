@@ -128,7 +128,12 @@ def test_build_image(
         base_ami = retrieve_latest_ami(region, os, ami_type="remarkable", architecture=architecture)
     elif "rhel" in os or "rocky" in os or "ubuntu" in os:
         # Test AMIs from first stage build. Because RHEL/Rocky and Ubuntu have specific requirement of kernel versions.
-        base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
+        try:
+            base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
+        except IndexError: # If first stage AMI is not available, use official AMI.
+            # Therefore, the test tries to succeed at best effort.
+            logging.info("First stage AMI not available, using official AMI instead.")
+            base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
     else:
         # Test vanilla AMIs.
         base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
