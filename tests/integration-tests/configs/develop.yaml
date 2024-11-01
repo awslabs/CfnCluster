@@ -443,7 +443,7 @@ test-suites:
           schedulers: [ "slurm" ]
     test_slurm.py::test_error_handling:
       dimensions:
-        - regions: ["ap-southeast-3"]
+        - regions: ["eu-west-1"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
           oss: [{{ OS_X86_6 }}]
           schedulers: ["slurm"]
