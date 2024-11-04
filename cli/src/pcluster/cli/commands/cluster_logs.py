@@ -15,7 +15,7 @@ from argparse import ArgumentParser, ArgumentTypeError, Namespace
 
 from pcluster import utils
 from pcluster.cli.commands.common import CliCommand, ExportLogsCommand
-from pcluster.constants import PCLUSTER_BUCKET_PROTECTED_FOLDER, PCLUSTER_BUCKET_PROTECTED_PREFIX
+from pcluster.constants import PCLUSTER_BUCKET_PROTECTED_PREFIX
 from pcluster.models.cluster import Cluster
 
 LOGGER = logging.getLogger(__name__)
@@ -83,18 +83,6 @@ class ExportClusterLogsCommand(ExportLogsCommand, CliCommand):
         except Exception as e:
             utils.error(f"Unable to export cluster's logs.\n{e}")
             return None
-
-    @staticmethod
-    def _validate_bucket_prefix(bucket_prefix: str) -> None:
-        if bucket_prefix:
-            if (
-                bucket_prefix.startswith(PCLUSTER_BUCKET_PROTECTED_PREFIX)
-                or bucket_prefix == PCLUSTER_BUCKET_PROTECTED_FOLDER
-            ):
-                raise ValueError(
-                    f"Cannot export logs to {bucket_prefix} as it is within the protected folder "
-                    f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder."
-                )
 
     @staticmethod
     def _export_cluster_logs(args: Namespace, output_file: str = None):

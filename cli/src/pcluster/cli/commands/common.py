@@ -15,6 +15,7 @@ from argparse import ArgumentParser, ArgumentTypeError
 
 from pcluster import utils
 from pcluster.cli.exceptions import ParameterException
+from pcluster.constants import PCLUSTER_BUCKET_PROTECTED_FOLDER, PCLUSTER_BUCKET_PROTECTED_PREFIX
 from pcluster.utils import to_utc_datetime
 
 LOGGER = logging.getLogger(__name__)
@@ -140,3 +141,15 @@ class ExportLogsCommand:
                 utils.error(f"Failed to create parent directory {file_dir} for file {file_path}. Reason: {e}")
         if not os.access(file_dir, os.W_OK):
             utils.error(f"Cannot write file: {file_path}. {file_dir} is not writeable.")
+
+    @staticmethod
+    def _validate_bucket_prefix(bucket_prefix: str) -> None:
+        if bucket_prefix:
+            if (
+                bucket_prefix.startswith(PCLUSTER_BUCKET_PROTECTED_PREFIX)
+                or bucket_prefix == PCLUSTER_BUCKET_PROTECTED_FOLDER
+            ):
+                raise ValueError(
+                    f"Cannot export logs to {bucket_prefix} as it is within the protected folder "
+                    f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder."
+                )

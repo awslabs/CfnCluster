@@ -16,7 +16,7 @@ from pcluster import utils
 from pcluster.api.controllers.common import assert_supported_operation
 from pcluster.aws.common import get_region
 from pcluster.cli.commands.common import CliCommand, ExportLogsCommand
-from pcluster.constants import PCLUSTER_BUCKET_PROTECTED_FOLDER, PCLUSTER_BUCKET_PROTECTED_PREFIX, Operation
+from pcluster.constants import PCLUSTER_BUCKET_PROTECTED_PREFIX, Operation
 from pcluster.models.imagebuilder import ImageBuilder
 
 LOGGER = logging.getLogger(__name__)
@@ -75,18 +75,6 @@ class ExportImageLogsCommand(ExportLogsCommand, CliCommand):
         except Exception as e:
             utils.error(f"Unable to export image's logs.\n{e}")
             return None
-
-    @staticmethod
-    def _validate_bucket_prefix(bucket_prefix: str) -> None:
-        if bucket_prefix:
-            if (
-                bucket_prefix.startswith(PCLUSTER_BUCKET_PROTECTED_PREFIX)
-                or bucket_prefix == PCLUSTER_BUCKET_PROTECTED_FOLDER
-            ):
-                raise ValueError(
-                    f"Cannot export logs to {bucket_prefix} as it is within the protected folder "
-                    f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder."
-                )
 
     @staticmethod
     def _export_image_logs(args: Namespace, output_file: str = None):

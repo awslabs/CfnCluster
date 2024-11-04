@@ -8,8 +8,10 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 # OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import os
 import textwrap
+from unittest.mock import Mock
 
 import pytest
 from assertpy import assert_that
@@ -426,3 +428,117 @@ def test_generate_bucket_policy(mocker):
 
     # Verify the mocked logs_policy_statements is contained
     assert_that(statements[1:]).is_equal_to(mock_logs_policy_statements)
+
+
+@pytest.mark.parametrize(
+    (
+        "head_object_side_effect",
+        "get_object_side_effect",
+        "get_object_return_value",
+        "expected_result",
+        "expected_exception",
+    ),
+    [
+        (
+            pytest.param(
+                None,
+                None,
+                {
+                    "Body": Mock(
+                        read=Mock(
+                            return_value=json.dumps({"bootstrapped_features": ["basic", "export-logs"]}).encode("utf-8")
+                        )
+                    )
+                },
+                True,
+                None,
+                id="The bootstrap file exists, content is in the new format, and contains all required features",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                None,
+                {
+                    "Body": Mock(
+                        read=Mock(return_value=json.dumps({"bootstrapped_features": ["basic"]}).encode("utf-8"))
+                    )
+                },
+                False,
+                None,
+                id="The bootstrap file exists, content is in the new format, but some required features are missing",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                None,
+                {"Body": Mock(read=Mock(return_value="bucket is configured successfully.".encode("utf-8")))},
+                False,
+                None,
+                id="The bootstrap file exists, content is in old format (not JSON string)",
+            )
+        ),
+        (
+            pytest.param(
+                AWSClientError(function_name="head_object", message="Not Found", error_code="404"),
+                None,
+                None,
+                False,
+                None,
+                id="The bootstrap file does not exist (head_object throws 404 error)",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                AWSClientError(function_name="get_object", message="Access Denied", error_code="403"),
+                None,
+                None,
+                AWSClientError,
+                id="get_object throws AWSClientError (not a 404 error)",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                None,
+                {"Body": Mock(read=Mock(return_value="{invalid json}".encode("utf-8")))},
+                False,
+                None,
+                id="The bootstrap file content cannot be parsed as JSON",
+            )
+        ),
+    ],
+)
+def test_check_bucket_is_bootstrapped(
+    mocker,
+    head_object_side_effect,
+    get_object_side_effect,
+    get_object_return_value,
+    expected_result,
+    expected_exception,
+):
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+
+    mocker.patch("pcluster.aws.s3.S3Client.head_object", side_effect=head_object_side_effect)
+
+    mocker.patch(
+        "pcluster.aws.s3.S3Client.get_object",
+        side_effect=get_object_side_effect,
+        return_value=get_object_return_value,
+    )
+
+    if expected_exception:
+        with pytest.raises(expected_exception):
+            bucket.check_bucket_is_bootstrapped()
+    else:
+        result = bucket.check_bucket_is_bootstrapped()
+        assert_that(result).is_equal_to(expected_result)
