@@ -17,7 +17,7 @@ from typing import Any, Callable, Set
 
 import pytest
 from filelock import FileLock
-from psutil import STATUS_ZOMBIE, NoSuchProcess, Process
+from psutil import STATUS_DEAD, STATUS_ZOMBIE, NoSuchProcess, Process
 from xdist import get_xdist_worker_id
 
 
@@ -81,7 +81,9 @@ class SharedFixture:
     @staticmethod
     def _is_valid_process(pid: int) -> bool:
         try:
-            return Process(pid).status() != STATUS_ZOMBIE
+            status = Process(pid).status()
+            logging.info("Process %s status: %s", pid, status)
+            return status not in [STATUS_ZOMBIE, STATUS_DEAD]
         except NoSuchProcess:
             return False
 
