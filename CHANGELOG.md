@@ -23,7 +23,9 @@ CHANGELOG
 **BUG FIXES**
 - Fix an issue in the way we configure the Pyxis Slurm plugin in ParallelCluster that can lead to job submission failures.
   https://github.com/aws/aws-parallelcluster/issues/6459
-- Add missing permissions required by login nodes to the public template of policies.
+- Fix an issue that was causing failing deployment in configurations with login nodes 
+  by add missing permissions required by login nodes in the public template of policies. 
+  https://github.com/aws/aws-parallelcluster/issues/6483
 
 3.11.0
 ------

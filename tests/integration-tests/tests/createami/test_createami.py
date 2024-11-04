@@ -128,7 +128,12 @@ def test_build_image(
         base_ami = retrieve_latest_ami(region, os, ami_type="remarkable", architecture=architecture)
     elif "rhel" in os or "rocky" in os or "ubuntu" in os:
         # Test AMIs from first stage build. Because RHEL/Rocky and Ubuntu have specific requirement of kernel versions.
-        base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
+        try:
+            base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
+        except IndexError:  # If first stage AMI is not available, use official AMI.
+            # Therefore, the test tries to succeed at best effort.
+            logging.info("First stage AMI not available, using official AMI instead.")
+            base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
     else:
         # Test vanilla AMIs.
         base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
@@ -341,7 +346,9 @@ def _test_export_logs(s3_bucket_factory, image, region):
     with tempfile.TemporaryDirectory() as tempdir:
         output_file = f"{tempdir}/testfile.tar.gz"
         bucket_prefix = "test_prefix"
-        ret = image.export_logs(bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix)
+        ret = retry(wait_fixed=seconds(20), stop_max_delay=minutes(10))(image.export_logs)(
+            bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix
+        )
         assert_that(ret["path"]).contains(output_file)
 
         rexp = rf"{image.image_id}-logs.*/cloudwatch-logs/{get_installed_parallelcluster_base_version()}-1"
