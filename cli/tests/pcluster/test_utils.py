@@ -659,12 +659,8 @@ def test_is_feature_supported(feature, region, expected_result):
         ),
     ],
 )
-def test_get_service_principal(mocker, service_name, partition, region, regional, expected_result, expected_exception):
+def test_get_service_principal(service_name, partition, region, regional, expected_result, expected_exception):
     """Test get_service_principal with various inputs."""
-    # Mock get_url_domain_suffix
-    domain_suffix = "amazonaws.com.cn" if partition == "aws-cn" else "amazonaws.com"
-    mocker.patch("pcluster.utils.get_url_domain_suffix", return_value=domain_suffix)
-
     if expected_exception:
         with pytest.raises(ValueError, match=str(expected_exception)):
             utils.get_service_principal(service_name, partition, region, regional)
