@@ -154,6 +154,7 @@ def test_build_image(
         _test_get_image_log_events(image)
         _test_list_images(image)
         _test_export_logs(s3_bucket_factory, image, region)
+        _test_export_logs(s3_bucket_factory, image, region, True)
 
     _test_cluster_creation(
         image.ec2_image_id, pcluster_config_reader, region, clusters_factory, scheduler_commands_factory
@@ -309,35 +310,42 @@ def _test_get_image_log_events(image):
             assert_that(events[0]["message"]).does_not_contain(first_event["message"])
 
 
-def _test_export_logs(s3_bucket_factory, image, region):
-    bucket_name = s3_bucket_factory()
-    logging.info("bucket is %s", bucket_name)
+def _test_export_logs(s3_bucket_factory, image, region, use_pcluster_bucket=False):
+    if not use_pcluster_bucket:
+        bucket_name = s3_bucket_factory()
+        logging.info("bucket is %s", bucket_name)
 
-    # set bucket permissions
-    partition = get_arn_partition(region)
-    bucket_policy = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": "s3:GetBucketAcl",
-                "Effect": "Allow",
-                "Resource": f"arn:{partition}:s3:::{bucket_name}",
-                "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
-            },
-            {
-                "Action": "s3:PutObject",
-                "Effect": "Allow",
-                "Resource": f"arn:{partition}:s3:::{bucket_name}/*",
-                "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
-                "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
-            },
-        ],
-    }
-    boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+        # set bucket permissions
+        partition = get_arn_partition(region)
+        bucket_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "s3:GetBucketAcl",
+                    "Effect": "Allow",
+                    "Resource": f"arn:{partition}:s3:::{bucket_name}",
+                    "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
+                },
+                {
+                    "Action": "s3:PutObject",
+                    "Effect": "Allow",
+                    "Resource": f"arn:{partition}:s3:::{bucket_name}/*",
+                    "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
+                    "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
+                },
+            ],
+        }
+        boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+    else:
+        logging.info("Using default pcluster bucket.")
+
     with tempfile.TemporaryDirectory() as tempdir:
         output_file = f"{tempdir}/testfile.tar.gz"
         bucket_prefix = "test_prefix"
-        ret = image.export_logs(bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix)
+        if not use_pcluster_bucket:
+            ret = image.export_logs(bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix)
+        else:
+            ret = image.export_logs(output_file=output_file, bucket_prefix=bucket_prefix)
         assert_that(ret["path"]).contains(output_file)
 
         rexp = rf"{image.image_id}-logs.*/cloudwatch-logs/{get_installed_parallelcluster_base_version()}-1"

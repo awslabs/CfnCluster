@@ -281,9 +281,11 @@ class Cluster:
 
         return None
 
-    def export_logs(self, bucket, output_file=None, bucket_prefix=None, filters=None):
+    def export_logs(self, bucket=None, output_file=None, bucket_prefix=None, filters=None):
         """Run pcluster export-cluster-logs and return the result."""
-        cmd_args = ["pcluster", "export-cluster-logs", "--cluster-name", self.name, "--bucket", bucket]
+        cmd_args = ["pcluster", "export-cluster-logs", "--cluster-name", self.name]
+        if bucket:
+            cmd_args += ["--bucket", bucket]
         if output_file:
             cmd_args += ["--output-file", output_file]
         if bucket_prefix:
