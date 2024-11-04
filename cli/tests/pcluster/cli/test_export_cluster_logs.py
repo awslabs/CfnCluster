@@ -12,6 +12,7 @@ import pytest
 from assertpy import assert_that
 
 from pcluster.cli.entrypoint import run
+from pcluster.constants import PCLUSTER_BUCKET_PROTECTED_PREFIX
 from pcluster.utils import to_kebab_case, to_utc_datetime
 
 BASE_COMMAND = ["pcluster", "export-cluster-logs"]
@@ -50,6 +51,33 @@ class TestExportClusterLogsCommand:
 
         out, err = capsys.readouterr()
         assert_that(out + err).contains(error_message)
+
+    @pytest.mark.parametrize(
+        "expected_failure, args, error_message",
+        [
+            (
+                True,
+                {"cluster-name": "clustername", "bucket-prefix": "parallelcluster"},
+                f"Cannot export logs to parallelcluster as it is within the protected folder "
+                f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder.",
+            ),
+            (
+                True,
+                {"cluster-name": "clustername", "bucket-prefix": "parallelcluster/"},
+                f"Cannot export logs to parallelcluster/ as it is within the protected folder "
+                f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder.",
+            ),
+            (
+                True,
+                {"cluster-name": "clustername", "bucket-prefix": "parallelcluster/abc"},
+                f"Cannot export logs to parallelcluster/abc as it is within the protected folder "
+                f"{PCLUSTER_BUCKET_PROTECTED_PREFIX}. Please use another folder.",
+            ),
+        ],
+    )
+    def test_invalid_bucket_prefix(self, args, expected_failure, error_message, run_cli):
+        command = BASE_COMMAND + self._build_cli_args({**args})
+        run_cli(command, expect_failure=expected_failure, expect_message=error_message)
 
     @pytest.mark.parametrize(
         "args",
