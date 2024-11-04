@@ -3,6 +3,9 @@ Image:
   Os: {{ os }}
 HeadNode:
   InstanceType: c5.24xlarge
+  {% if shared_headnode_storage_type %}
+  SharedStorageType: {{ shared_headnode_storage_type }}
+  {% endif %}
   Networking:
     SubnetId: {{ public_subnet_id }}
   Ssh:

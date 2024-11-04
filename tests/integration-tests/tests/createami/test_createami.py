@@ -123,11 +123,20 @@ def test_build_image(
     bucket_name = s3_bucket_factory()
 
     # Get base AMI
-    # remarkable AMIs are not available for ARM and ubuntu2204 yet
-    if os not in ["ubuntu2204", "alinux2023"]:
+    if os in ["alinux2", "ubuntu2004"]:
+        # Test Deep Learning AMIs
         base_ami = retrieve_latest_ami(region, os, ami_type="remarkable", architecture=architecture)
+    elif "rhel" in os or "rocky" in os or "ubuntu" in os:
+        # Test AMIs from first stage build. Because RHEL/Rocky and Ubuntu have specific requirement of kernel versions.
+        try:
+            base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
+        except IndexError:  # If first stage AMI is not available, use official AMI.
+            # Therefore, the test tries to succeed at best effort.
+            logging.info("First stage AMI not available, using official AMI instead.")
+            base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
     else:
-        base_ami = retrieve_latest_ami(region, os, architecture=architecture)
+        # Test vanilla AMIs.
+        base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
 
     image_config = pcluster_config_reader(
         config_file="image.config.yaml", parent_image=base_ami, instance_role=instance_role, bucket_name=bucket_name
@@ -342,10 +351,16 @@ def _test_export_logs(s3_bucket_factory, image, region, use_pcluster_bucket=Fals
     with tempfile.TemporaryDirectory() as tempdir:
         output_file = f"{tempdir}/testfile.tar.gz"
         bucket_prefix = "test_prefix"
+
         if not use_pcluster_bucket:
-            ret = image.export_logs(bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix)
+            ret = retry(wait_fixed=seconds(20), stop_max_delay=minutes(10))(image.export_logs)(
+                bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix
+            )
         else:
-            ret = image.export_logs(output_file=output_file, bucket_prefix=bucket_prefix)
+            ret = retry(wait_fixed=seconds(20), stop_max_delay=minutes(10))(image.export_logs)(
+                output_file=output_file, bucket_prefix=bucket_prefix
+            )
+
         assert_that(ret["path"]).contains(output_file)
 
         rexp = rf"{image.image_id}-logs.*/cloudwatch-logs/{get_installed_parallelcluster_base_version()}-1"

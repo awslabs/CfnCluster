@@ -89,11 +89,24 @@ OS_TO_PCLUSTER_AMI_NAME_OWNER_MAP = {
     "rocky9": {"name": "rocky9-hvm-*-*", "owners": PCLUSTER_AMI_OWNERS},
 }
 
+FIRST_STAGE_AMI_OWNERS = ["self", "447714826191"]
+OS_TO_FIRST_STAGE_AMI_NAME_MAP = {
+    "alinux2": {"name": "first-stage-aws-parallelcluster-*-amzn2-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "alinux2023": {"name": "first-stage-aws-parallelcluster-*-amzn2023-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "ubuntu2004": {"name": "first-stage-aws-parallelcluster-*-ubuntu-2004-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "ubuntu2204": {"name": "first-stage-aws-parallelcluster-*-ubuntu-2204-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "rhel8": {"name": "first-stage-aws-parallelcluster-*-rhel8-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "rocky8": {"name": "first-stage-aws-parallelcluster-*-rocky8-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "rhel9": {"name": "first-stage-aws-parallelcluster-*-rhel9-*", "owners": FIRST_STAGE_AMI_OWNERS},
+    "rocky9": {"name": "first-stage-aws-parallelcluster-*-rocky9-*", "owners": FIRST_STAGE_AMI_OWNERS},
+}
+
 AMI_TYPE_DICT = {
     "official": OS_TO_OFFICIAL_AMI_NAME_OWNER_MAP,
     "remarkable": OS_TO_REMARKABLE_AMI_NAME_OWNER_MAP,
     "pcluster": OS_TO_PCLUSTER_AMI_NAME_OWNER_MAP,
     "kernel4": OS_TO_KERNEL4_AMI_NAME_OWNER_MAP,
+    "first_stage": OS_TO_FIRST_STAGE_AMI_NAME_MAP,
 }
 
 

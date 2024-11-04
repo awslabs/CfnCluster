@@ -1,6 +1,7 @@
 Image:
   Os: {{ os }}
 HeadNode:
+  SharedStorageType: {{ shared_headnode_storage_type }}
   InstanceType: {{ instance }}
   Networking:
     SubnetId: {{ public_subnet_id }}
@@ -140,4 +141,3 @@ SharedStorage:
     FileCacheSettings:
       FileCacheId: {{ existing_file_cache_id }}
 {% endif %}
-
