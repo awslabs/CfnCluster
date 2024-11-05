@@ -179,7 +179,7 @@ Resources:
               Service:
                 - lambda.amazonaws.com
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
         - PolicyName: FSxFCPolicy
           PolicyDocument:
@@ -203,14 +203,14 @@ Resources:
                   - iam:CreateServiceLinkedRole
                   - iam:AttachRolePolicy
                   - iam:PutRolePolicy
-                Resource: arn:aws:iam::*:role/aws-service-role/s3.data-source.lustre.fsx.amazonaws.com/*
+                Resource: !Sub arn:${AWS::Partition}:iam::*:role/aws-service-role/s3.data-source.lustre.fsx.amazonaws.com/*
                 Effect: Allow
               - Action:
                   - s3:Get*
                   - s3:List*
                   - s3:PutObject
                 Effect: Allow
-                Resource: !Sub arn:aws:s3:::${S3BucketName}
+                Resource: !Sub arn:${AWS::Partition}:s3:::${S3BucketName}
 
 Outputs:
   FileCacheId:

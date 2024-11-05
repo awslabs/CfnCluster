@@ -115,6 +115,9 @@ Parameters:
 Conditions:
   CreateEbs: !Equals [!Ref CreateEbs, 'true']
   CreateEfs: !Equals [!Ref CreateEfs, 'true']
+  CreateMountTargetResourceEfs0SubnetThree: !And
+    - !Equals [!Ref CreateEfs, 'true']
+    - !Not [!Equals [!Ref SubnetThree, '']]
   CreateFsxLustre: !Equals [!Ref CreateFsxLustre, 'true']
   CreateFsxOntap: !Equals [!Ref CreateFsxOntap, 'true']
   CreateFsxOpenZfs: !Equals [!Ref CreateFsxOpenZfs, 'true']
@@ -162,7 +165,7 @@ Resources:
       SubnetId: !Ref SubnetTwo
   MountTargetResourceEfs0SubnetThree:
     Type: 'AWS::EFS::MountTarget'
-    Condition: CreateEfs
+    Condition: CreateMountTargetResourceEfs0SubnetThree
     Properties:
       FileSystemId: !Ref EfsFileSystem
       SecurityGroups:
@@ -550,7 +553,7 @@ Resources:
                   - iam:CreateServiceLinkedRole
                   - iam:AttachRolePolicy
                   - iam:PutRolePolicy
-                Resource: arn:aws:iam::*:role/aws-service-role/s3.data-source.lustre.fsx.amazonaws.com/*
+                Resource: !Sub arn:${AWS::Partition}:iam::*:role/aws-service-role/s3.data-source.lustre.fsx.amazonaws.com/*
                 Effect: Allow
               - Action:
                   - s3:Get*
