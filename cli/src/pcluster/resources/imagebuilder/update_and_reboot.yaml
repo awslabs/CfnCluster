@@ -327,7 +327,7 @@ phases:
                  echo "SSM agent is installed by default"
               fi
 
-      - name: RebootStep
+      - name: RebootStep2
         action: Reboot
         onFailure: Abort
         maxAttempts: 2
