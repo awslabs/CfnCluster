@@ -8,16 +8,19 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 # OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import os
 import textwrap
+from unittest.mock import Mock
 
 import pytest
 from assertpy import assert_that
 
 from pcluster.aws.common import AWSClientError
 from pcluster.models.s3_bucket import S3Bucket, S3FileFormat, S3FileType, format_content
+from pcluster.utils import format_arn, get_service_principal
 from tests.pcluster.aws.dummy_aws_api import mock_aws_api
-from tests.pcluster.models.dummy_s3_bucket import dummy_cluster_bucket, mock_bucket
+from tests.pcluster.models.dummy_s3_bucket import dummy_cluster_bucket, mock_bucket, mock_bucket_utils
 
 
 @pytest.mark.parametrize(
@@ -301,3 +304,243 @@ def test_upload_file(mocker, content, file_name, file_type, s3_file_format, expe
         body=expected_object_body,
         key=f"{artifact_directory}/{expected_object_key}",
     )
+
+
+def test_get_bucket_policy_for_cloudwatch_logs(mocker):
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+
+    partition = "fake_partition"
+    region = "fake-region"
+    account_id = "fake-id"
+    bucket_name = bucket.name
+
+    bucket_arn = format_arn(partition, "s3", "", "", bucket_name)
+    bucket_arn_with_wildcard = f"{bucket_arn}/*"
+    logs_service_principal = get_service_principal(
+        service_name="logs", partition=partition, region=region, regional=True
+    )
+
+    log_group_arns = [
+        format_arn(partition, "logs", region, account_id, "log-group:/aws/parallelcluster/*"),
+        format_arn(partition, "logs", region, account_id, "log-group:/aws/imagebuilder/*"),
+    ]
+
+    policy_statements = bucket._get_bucket_policy_for_cloudwatch_logs()
+
+    assert_that(policy_statements).is_length(3)
+
+    expected_policy_statements = [
+        {
+            "Sid": "AllowReadBucketAclForExportLogs",
+            "Action": "s3:GetBucketAcl",
+            "Effect": "Allow",
+            "Resource": bucket_arn,
+            "Principal": {"Service": logs_service_principal},
+            "Condition": {
+                "StringEquals": {"aws:SourceAccount": account_id},
+                "ArnLike": {
+                    "aws:SourceArn": log_group_arns,
+                },
+            },
+        },
+        {
+            "Sid": "AllowPutObjectForExportLogs",
+            "Action": "s3:PutObject",
+            "Effect": "Allow",
+            "Resource": bucket_arn_with_wildcard,
+            "Principal": {"Service": logs_service_principal},
+            "Condition": {
+                "StringEquals": {
+                    "s3:x-amz-acl": "bucket-owner-full-control",
+                    "aws:SourceAccount": account_id,
+                },
+                "ArnLike": {
+                    "aws:SourceArn": log_group_arns,
+                },
+            },
+        },
+        {
+            "Sid": "DenyPutObjectOnReservedPath",
+            "Action": "s3:PutObject",
+            "Effect": "Deny",
+            "Resource": f"{bucket_arn}/parallelcluster/*",
+            "Principal": {"Service": logs_service_principal},
+        },
+    ]
+    assert_that(policy_statements).is_equal_to(expected_policy_statements)
+
+
+def test_generate_bucket_policy(mocker):
+    """Test _generate_bucket_policy method."""
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+    bucket_name = bucket.name
+
+    # Mock _get_bucket_policy_for_cloudwatch_logs
+    mock_logs_policy_statements = [
+        {"Sid": "MockStatement1", "Action": "s3:MockAction1"},
+        {"Sid": "MockStatement2", "Action": "s3:MockAction2"},
+    ]
+    mocker.patch(
+        "pcluster.models.s3_bucket.S3Bucket._get_bucket_policy_for_cloudwatch_logs",
+        return_value=mock_logs_policy_statements,
+    )
+
+    # Expected values
+    partition = "fake_partition"
+    bucket_arn = format_arn(partition, "s3", "", "", bucket_name)
+    bucket_arn_with_wildcard = f"{bucket_arn}/*"
+
+    bucket_policy = bucket._generate_bucket_policy()
+
+    # Verify bucket_policy
+    assert_that(bucket_policy["Version"]).is_equal_to("2012-10-17")
+    assert_that(bucket_policy).contains("Statement")
+    statements = bucket_policy["Statement"]
+
+    # There should be one DenyHTTP policy and the mocked logs_policy_statements
+    assert_that(statements).is_length(1 + len(mock_logs_policy_statements))
+
+    # Verify DenyHTTP policy
+    deny_http_statement = statements[0]
+    expected_deny_http_statement = {
+        "Sid": "AllowSSLRequestsOnly",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:*",
+        "Resource": [bucket_arn, bucket_arn_with_wildcard],
+        "Condition": {"Bool": {"aws:SecureTransport": "false"}},
+    }
+    assert_that(deny_http_statement).is_equal_to(expected_deny_http_statement)
+
+    # Verify the mocked logs_policy_statements is contained
+    assert_that(statements[1:]).is_equal_to(mock_logs_policy_statements)
+
+
+@pytest.mark.parametrize(
+    (
+        "head_object_side_effect",
+        "get_object_side_effect",
+        "get_object_return_value",
+        "expected_result",
+        "expected_exception",
+    ),
+    [
+        (
+            pytest.param(
+                None,
+                None,
+                {
+                    "Body": Mock(
+                        read=Mock(
+                            return_value=json.dumps({"bootstrapped_features": ["basic", "export-logs"]}).encode("utf-8")
+                        )
+                    )
+                },
+                True,
+                None,
+                id="The bootstrap file exists, content is in the new format, and contains all required features",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                None,
+                {
+                    "Body": Mock(
+                        read=Mock(return_value=json.dumps({"bootstrapped_features": ["basic"]}).encode("utf-8"))
+                    )
+                },
+                False,
+                None,
+                id="The bootstrap file exists, content is in the new format, but some required features are missing",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                None,
+                {"Body": Mock(read=Mock(return_value="bucket is configured successfully.".encode("utf-8")))},
+                False,
+                None,
+                id="The bootstrap file exists, content is in old format (not JSON string)",
+            )
+        ),
+        (
+            pytest.param(
+                AWSClientError(function_name="head_object", message="Not Found", error_code="404"),
+                None,
+                None,
+                False,
+                None,
+                id="The bootstrap file does not exist (head_object throws 404 error)",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                AWSClientError(function_name="get_object", message="Access Denied", error_code="403"),
+                None,
+                None,
+                AWSClientError,
+                id="get_object throws AWSClientError (not a 404 error)",
+            )
+        ),
+        (
+            pytest.param(
+                None,
+                None,
+                {"Body": Mock(read=Mock(return_value="{invalid json}".encode("utf-8")))},
+                False,
+                None,
+                id="The bootstrap file content cannot be parsed as JSON",
+            )
+        ),
+    ],
+)
+def test_check_bucket_is_bootstrapped(
+    mocker,
+    head_object_side_effect,
+    get_object_side_effect,
+    get_object_return_value,
+    expected_result,
+    expected_exception,
+):
+    mock_aws_api(mocker)
+    mock_bucket(mocker)
+    mock_bucket_utils(mocker)
+    bucket = S3Bucket(
+        service_name="test-service",
+        stack_name="test-stack",
+        artifact_directory="test-artifact-directory",
+    )
+
+    mocker.patch("pcluster.aws.s3.S3Client.head_object", side_effect=head_object_side_effect)
+
+    mocker.patch(
+        "pcluster.aws.s3.S3Client.get_object",
+        side_effect=get_object_side_effect,
+        return_value=get_object_return_value,
+    )
+
+    if expected_exception:
+        with pytest.raises(expected_exception):
+            bucket.check_bucket_is_bootstrapped()
+    else:
+        result = bucket.check_bucket_is_bootstrapped()
+        assert_that(result).is_equal_to(expected_result)

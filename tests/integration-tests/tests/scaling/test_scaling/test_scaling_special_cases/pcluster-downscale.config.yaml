@@ -2,6 +2,7 @@ Image:
   Os: {{ os }}
 HeadNode:
   InstanceType: r5d.24xlarge
+  SharedStorageType: {{ shared_headnode_storage_type }}
   Networking:
     SubnetId: {{ public_subnet_id }}
   Ssh:

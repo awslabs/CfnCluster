@@ -1,4 +1,3 @@
 MaxMonitoringTimeInMins: 20
 ScalingTargets: [1000, 2000, 3000, 4000]
-SharedHeadNodeStorageType: 'Efs'
 HeadNodeInstanceType: 'c5n.18xlarge'

@@ -602,6 +602,7 @@ def pcluster_config_reader(test_datadir, vpc_stack, request, region, architectur
             raise FileNotFoundError(f"Cluster config file not found in the expected dir {config_file_path}")
         output_file_path = test_datadir / output_file if output_file else config_file_path
         default_values = _get_default_template_values(vpc_stack, request)
+        kwargs = inject_internal_storage_settings(**kwargs)
         file_loader = FileSystemLoader(str(test_datadir))
         env = SandboxedEnvironment(loader=file_loader)
         rendered_template = env.get_template(config_file).render(**{**default_values, **kwargs})
@@ -613,6 +614,12 @@ def pcluster_config_reader(test_datadir, vpc_stack, request, region, architectur
         return output_file_path
 
     return _config_renderer
+
+
+def inject_internal_storage_settings(**kwargs):
+    if not kwargs.get("shared_headnode_storage_type"):
+        kwargs["shared_headnode_storage_type"] = "Efs"
+    return kwargs
 
 
 def inject_additional_image_configs_settings(image_config, request):
@@ -857,7 +864,6 @@ def _get_default_template_values(vpc_stack: CfnVpcStack, request):
 
     default_values["imds_secured"] = default_values.get("scheduler") in SCHEDULERS_SUPPORTING_IMDS_SECURED
     default_values["scheduler_prefix"] = {"slurm": "Slurm", "awsbatch": "AwsBatch"}.get(default_values.get("scheduler"))
-
     return default_values
 
 
