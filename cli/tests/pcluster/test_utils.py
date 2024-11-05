@@ -619,7 +619,7 @@ def test_is_feature_supported(feature, region, expected_result):
             False,
             "ANY_SERVICE.A_DOMAIN_SUFFIX",
             None,
-            id="Non-regional service principal in aws partition",
+            id="Non-regional service principal",
         ),
         pytest.param(
             "ANY_SERVICE",
@@ -628,7 +628,7 @@ def test_is_feature_supported(feature, region, expected_result):
             True,
             "ANY_SERVICE.ANY_REGION.A_DOMAIN_SUFFIX",
             None,
-            id="Regional service principal in aws partition",
+            id="Regional service principal",
         ),
         pytest.param(
             "ANY_SERVICE",
@@ -638,24 +638,6 @@ def test_is_feature_supported(feature, region, expected_result):
             None,
             ValueError("Region must be provided when 'regional' is True."),
             id="Regional=True without region provided",
-        ),
-        pytest.param(
-            "ANY_SERVICE",
-            "ANY_PARTITION",
-            None,
-            False,
-            "ANY_SERVICE.A_DOMAIN_SUFFIX",
-            None,
-            id="Non-regional service principal in aws-cn partition",
-        ),
-        pytest.param(
-            "ANY_SERVICE",
-            "ANY_PARTITION",
-            "ANY_REGION",
-            True,
-            "ANY_SERVICE.ANY_REGION.A_DOMAIN_SUFFIX",
-            None,
-            id="Regional service principal in aws-cn partition",
         ),
     ],
 )
