@@ -228,6 +228,9 @@ class CfnStacksFactory:
                             return
                     cfn_client.delete_stack(StackName=stack.name)
                     final_status = self.__wait_for_stack_deletion(stack.cfn_stack_id, cfn_client)
+                    if final_status == "DELETE_FAILED":
+                        cfn_client.delete_stack(StackName=stack.name, DeletionMode="FORCE_DELETE_STACK")
+                        final_status = self.__wait_for_stack_deletion(stack.cfn_stack_id, cfn_client)
                     self.__assert_stack_status(
                         final_status, "DELETE_COMPLETE", stack_name=stack.cfn_stack_id, region=region
                     )
