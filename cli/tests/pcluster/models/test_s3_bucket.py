@@ -337,46 +337,45 @@ def test_get_bucket_policy_for_cloudwatch_logs(mocker):
 
     assert_that(policy_statements).is_length(3)
 
-    statements_by_sid = {statement["Sid"]: statement for statement in policy_statements}
-
-    # Verify AllowReadBucketAclForExportLogs policy
-    read_acl_statement = statements_by_sid.get("AllowReadBucketAclForExportLogs")
-    assert_that(read_acl_statement).is_not_none()
-    assert_that(read_acl_statement["Action"]).is_equal_to("s3:GetBucketAcl")
-    assert_that(read_acl_statement["Effect"]).is_equal_to("Allow")
-    assert_that(read_acl_statement["Resource"]).is_equal_to(bucket_arn)
-    assert_that(read_acl_statement["Principal"]).is_equal_to({"Service": logs_service_principal})
-    assert_that(read_acl_statement["Condition"]).is_equal_to(
+    expected_policy_statements = [
         {
-            "StringEquals": {"aws:SourceAccount": account_id},
-            "ArnLike": {"aws:SourceArn": log_group_arns},
-        }
-    )
-
-    # Verify AllowPutObjectForExportLogs policy
-    put_object_statement = statements_by_sid.get("AllowPutObjectForExportLogs")
-    assert_that(put_object_statement).is_not_none()
-    assert_that(put_object_statement["Action"]).is_equal_to("s3:PutObject")
-    assert_that(put_object_statement["Effect"]).is_equal_to("Allow")
-    assert_that(put_object_statement["Resource"]).is_equal_to(bucket_arn_with_wildcard)
-    assert_that(put_object_statement["Principal"]).is_equal_to({"Service": logs_service_principal})
-    assert_that(put_object_statement["Condition"]).is_equal_to(
-        {
-            "StringEquals": {
-                "s3:x-amz-acl": "bucket-owner-full-control",
-                "aws:SourceAccount": account_id,
+            "Sid": "AllowReadBucketAclForExportLogs",
+            "Action": "s3:GetBucketAcl",
+            "Effect": "Allow",
+            "Resource": bucket_arn,
+            "Principal": {"Service": logs_service_principal},
+            "Condition": {
+                "StringEquals": {"aws:SourceAccount": account_id},
+                "ArnLike": {
+                    "aws:SourceArn": log_group_arns,
+                },
             },
-            "ArnLike": {"aws:SourceArn": log_group_arns},
-        }
-    )
-
-    # Verify DenyPutObjectOnReservedPath policy
-    deny_put_object_statement = statements_by_sid.get("DenyPutObjectOnReservedPath")
-    assert_that(deny_put_object_statement).is_not_none()
-    assert_that(deny_put_object_statement["Action"]).is_equal_to("s3:PutObject")
-    assert_that(deny_put_object_statement["Effect"]).is_equal_to("Deny")
-    assert_that(deny_put_object_statement["Resource"]).is_equal_to(f"{bucket_arn}/parallelcluster/*")
-    assert_that(deny_put_object_statement["Principal"]).is_equal_to({"Service": logs_service_principal})
+        },
+        {
+            "Sid": "AllowPutObjectForExportLogs",
+            "Action": "s3:PutObject",
+            "Effect": "Allow",
+            "Resource": bucket_arn_with_wildcard,
+            "Principal": {"Service": logs_service_principal},
+            "Condition": {
+                "StringEquals": {
+                    "s3:x-amz-acl": "bucket-owner-full-control",
+                    "aws:SourceAccount": account_id,
+                },
+                "ArnLike": {
+                    "aws:SourceArn": log_group_arns,
+                },
+            },
+        },
+        {
+            "Sid": "DenyPutObjectOnReservedPath",
+            "Action": "s3:PutObject",
+            "Effect": "Deny",
+            "Resource": f"{bucket_arn}/parallelcluster/*",
+            "Principal": {"Service": logs_service_principal},
+        },
+    ]
+    assert_that(policy_statements).is_equal_to(expected_policy_statements)
 
 
 def test_generate_bucket_policy(mocker):
@@ -419,12 +418,15 @@ def test_generate_bucket_policy(mocker):
 
     # Verify DenyHTTP policy
     deny_http_statement = statements[0]
-    assert_that(deny_http_statement["Sid"]).is_equal_to("AllowSSLRequestsOnly")
-    assert_that(deny_http_statement["Effect"]).is_equal_to("Deny")
-    assert_that(deny_http_statement["Principal"]).is_equal_to("*")
-    assert_that(deny_http_statement["Action"]).is_equal_to("s3:*")
-    assert_that(deny_http_statement["Resource"]).is_equal_to([bucket_arn, bucket_arn_with_wildcard])
-    assert_that(deny_http_statement["Condition"]).is_equal_to({"Bool": {"aws:SecureTransport": "false"}})
+    expected_deny_http_statement = {
+        "Sid": "AllowSSLRequestsOnly",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:*",
+        "Resource": [bucket_arn, bucket_arn_with_wildcard],
+        "Condition": {"Bool": {"aws:SecureTransport": "false"}},
+    }
+    assert_that(deny_http_statement).is_equal_to(expected_deny_http_statement)
 
     # Verify the mocked logs_policy_statements is contained
     assert_that(statements[1:]).is_equal_to(mock_logs_policy_statements)
