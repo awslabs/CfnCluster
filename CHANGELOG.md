@@ -41,6 +41,9 @@ CHANGELOG
 - Install enroot and pyxis in official pcluster AMIs
 
 **CHANGES**
+- *[BREAKING]* The `loginNodes` field returned by the API `DescribeCluster` and the CLI command `describe-cluster` 
+  has been changed from a dictionary to an array to support multiple pools of login nodes. 
+  This change breaks backward compatibility, making these operations incompatible with clusters deployed with older versions.
 - Upgrade Slurm to 23.11.10 (from 23.11.7).
 - Upgrade Pmix to 5.0.3 (from 5.0.2).
 - Upgrade EFA installer to `1.34.0`.
