@@ -121,6 +121,7 @@ def test_build_image(
 
     # Get custom S3 bucket
     bucket_name = s3_bucket_factory()
+    _set_s3_bucket_policy(bucket_name, get_arn_partition(region), region)
 
     # Get base AMI
     if os in ["alinux2", "ubuntu2004"]:
@@ -319,6 +320,28 @@ def _test_get_image_log_events(image):
             assert_that(events[0]["message"]).does_not_contain(first_event["message"])
 
 
+def _set_s3_bucket_policy(bucket_name, partition, region):
+    bucket_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": "s3:GetBucketAcl",
+                "Effect": "Allow",
+                "Resource": f"arn:{partition}:s3:::{bucket_name}",
+                "Principal": {"Service": f"logs.{region}.amazonaws.com"},
+            },
+            {
+                "Action": "s3:PutObject",
+                "Effect": "Allow",
+                "Resource": f"arn:{partition}:s3:::{bucket_name}/*",
+                "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
+                "Principal": {"Service": f"logs.{region}.amazonaws.com"},
+            },
+        ],
+    }
+    boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+
+
 def _test_export_logs(s3_bucket_factory, image, region, use_pcluster_bucket=False):
     if not use_pcluster_bucket:
         bucket_name = s3_bucket_factory()
@@ -326,25 +349,7 @@ def _test_export_logs(s3_bucket_factory, image, region, use_pcluster_bucket=Fals
 
         # set bucket permissions
         partition = get_arn_partition(region)
-        bucket_policy = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Action": "s3:GetBucketAcl",
-                    "Effect": "Allow",
-                    "Resource": f"arn:{partition}:s3:::{bucket_name}",
-                    "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
-                },
-                {
-                    "Action": "s3:PutObject",
-                    "Effect": "Allow",
-                    "Resource": f"arn:{partition}:s3:::{bucket_name}/*",
-                    "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
-                    "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
-                },
-            ],
-        }
-        boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+        _set_s3_bucket_policy(bucket_name, partition, image.region)
     else:
         logging.info("Using default pcluster bucket.")
 
