@@ -10,7 +10,7 @@ test-suites:
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
           oss: [ {{ OS_X86_0 }}, {{ OS_X86_2 }}]
           schedulers: ["slurm"]
-        - regions: ["eu-central-1"]
+        - regions: ["ap-northeast-1"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
           oss: [{{ OS_X86_4 }}, {{ OS_X86_6 }}]
           schedulers: ["slurm"]
