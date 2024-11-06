@@ -16,6 +16,6 @@ Scheduling:
       ComputeResources:
         - Name: cr1
           Instances:
-            - InstanceType: t3.small
+            - InstanceType: t3.medium
           MinCount: 2
           MaxCount: 4
