@@ -191,7 +191,8 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
     # On the other hand, the update workflow waits for existing nodes to complete their update recipes.
     # As a consequence, the stack may reach the UPDATE_COMPLETE state
     # without waiting for new static nodes to complete their bootstrap recipes.
-    retry(wait_fixed=seconds(10), stop_max_delay=minutes(3))(assert_instance_config_version_on_ddb)(
+    # We wait at most 6 minutes because we know that compute nodes may take 4/5 minutes to bootstrap.
+    retry(wait_fixed=seconds(10), stop_max_delay=minutes(6))(assert_instance_config_version_on_ddb)(
         cluster, last_cluster_config_version
     )
 
