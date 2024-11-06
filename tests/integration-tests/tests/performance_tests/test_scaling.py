@@ -91,8 +91,8 @@ def _get_scaling_time(capacity_time_series: list, timestamps: list, scaling_targ
 
 
 @pytest.mark.usefixtures("scheduler")
-@pytest.mark.parametrize("scaling_strategy", ["all-or-nothing", "best-effort"])
-@pytest.mark.parametrize("shared_headnode_storage_type", ["Efs", "Ebs"])
+@pytest.mark.parametrize("scaling_strategy", ["best-effort", "all-or-nothing"])
+@pytest.mark.parametrize("shared_headnode_storage_type", ["Ebs", "Efs"])
 def test_scaling_stress_test(
     test_datadir,
     instance,
@@ -168,8 +168,8 @@ def test_scaling_stress_test(
 
 
 @pytest.mark.usefixtures("scheduler")
-@pytest.mark.parametrize("scaling_strategy", ["all-or-nothing", "best-effort"])
-@pytest.mark.parametrize("shared_headnode_storage_type", ["Efs", "Ebs"])
+@pytest.mark.parametrize("scaling_strategy", ["best-effort", "all-or-nothing"])
+@pytest.mark.parametrize("shared_headnode_storage_type", ["Ebs", "Efs"])
 def test_static_scaling_stress_test(
     test_datadir,
     instance,
