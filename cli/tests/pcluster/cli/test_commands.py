@@ -10,6 +10,7 @@
 # limitations under the License.
 
 """This module provides unit tests for the functions in the pcluster.commands module."""
+
 import pytest
 from assertpy import assert_that
 
@@ -224,13 +225,15 @@ def test_setup_bucket_with_resources_creation_failure(
 @pytest.mark.parametrize(
     (
         "check_bucket_is_bootstrapped_error",
+        "check_bucket_is_bootstrapped_return_value",
         "bucket_configure_error",
         "upload_bootstrapped_file_error",
         "cluster_action_error",
     ),
     [
         (
-            AWSClientError(function_name="head_object", message="No object", error_code="404"),
+            None,
+            False,
             AWSClientError(function_name="put_bucket_versioning", message="No put bucket versioning policy"),
             None,
             "Unable to initialize s3 bucket. No put bucket versioning policy",
@@ -239,10 +242,12 @@ def test_setup_bucket_with_resources_creation_failure(
             AWSClientError(function_name="head_object", message="NoSuchBucket", error_code="403"),
             None,
             None,
+            None,
             "NoSuchBucket",
         ),
         (
-            AWSClientError(function_name="head_object", message="No object", error_code="404"),
+            None,
+            False,
             None,
             AWSClientError(function_name="put_object", message="No put object policy"),
             "No put object policy",
@@ -252,6 +257,7 @@ def test_setup_bucket_with_resources_creation_failure(
 def test_setup_bucket_with_bucket_configuration_failure(
     mocker,
     check_bucket_is_bootstrapped_error,
+    check_bucket_is_bootstrapped_return_value,
     bucket_configure_error,
     upload_bootstrapped_file_error,
     cluster_action_error,
@@ -271,6 +277,7 @@ def test_setup_bucket_with_bucket_configuration_failure(
         mocker,
         check_bucket_is_bootstrapped_side_effect=check_bucket_is_bootstrapped_error,
         upload_bootstrapped_file_side_effect=upload_bootstrapped_file_error,
+        check_bucket_is_bootstrapped_return_value=check_bucket_is_bootstrapped_return_value,
     )
 
     with pytest.raises(ClusterActionError, match=cluster_action_error):

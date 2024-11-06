@@ -3,13 +3,11 @@ CHANGELOG
 3.12.0
 ------
 
+**CHANGES**
+- The CLI commands `export-cluster-logs` and `export-image-logs` can now by default export the logs to the default ParallelCluster bucket or to the CustomS3Bucket if specified in the config.
+
 **BUG FIXES**
 - When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003
-
-3.12.0
-------
-
-**CHANGES**
 
 3.11.1
 ------
@@ -41,6 +39,9 @@ CHANGELOG
 - Install enroot and pyxis in official pcluster AMIs
 
 **CHANGES**
+- *[BREAKING]* The `loginNodes` field returned by the API `DescribeCluster` and the CLI command `describe-cluster` 
+  has been changed from a dictionary to an array to support multiple pools of login nodes. 
+  This change breaks backward compatibility, making these operations incompatible with clusters deployed with older versions.
 - Upgrade Slurm to 23.11.10 (from 23.11.7).
 - Upgrade Pmix to 5.0.3 (from 5.0.2).
 - Upgrade EFA installer to `1.34.0`.
