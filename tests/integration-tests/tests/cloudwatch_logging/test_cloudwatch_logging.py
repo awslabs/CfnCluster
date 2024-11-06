@@ -221,7 +221,7 @@ class CloudWatchLoggingClusterState:
         """Get EC2 instances belonging to this cluster. Figure out their roles in the cluster."""
         for instance in cw_logs_utils.get_ec2_instances():
             # Ensure the instance is in 'running' state
-            if instance.get('State', {}).get('Name') != 'running':
+            if instance.get("State", {}).get("Name") != "running":
                 continue
             tags = {tag.get("Key"): tag.get("Value") for tag in instance.get("Tags", [])}
             if tags.get("parallelcluster:cluster-name", "") != self.cluster.name:
