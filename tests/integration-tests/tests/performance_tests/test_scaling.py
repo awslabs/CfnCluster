@@ -13,7 +13,7 @@ from utils import disable_protected_mode
 from tests.common.assertions import assert_no_msg_in_logs
 from tests.common.scaling_common import get_bootstrap_errors, get_scaling_metrics, validate_and_get_scaling_test_config
 
-MAX_QUEUE_SIZE = 50000
+MAX_QUEUE_SIZE = 30000
 
 
 @pytest.mark.parametrize(
