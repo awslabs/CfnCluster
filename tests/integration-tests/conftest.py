@@ -1775,10 +1775,10 @@ def open_zfs_volume_factory(vpc_stack, cfn_stacks_factory, request, region, key_
 
 
 @pytest.fixture(scope="class")
-def snapshots_factory():
+def snapshots_factory(region):
     factory = EBSSnapshotsFactory()
     yield factory
-    factory.release_all()
+    factory.release_all(region)
 
 
 @pytest.fixture(scope="class")

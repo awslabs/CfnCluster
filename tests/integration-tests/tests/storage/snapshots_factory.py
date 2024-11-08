@@ -18,7 +18,7 @@ import boto3
 from fabric import Connection
 from retrying import retry
 from time_utils import minutes, seconds
-from utils import random_alphanumeric
+from utils import get_arn_partition, random_alphanumeric
 
 SnapshotConfig = namedtuple("ClusterConfig", ["ssh_key", "key_name", "vpc_id", "head_node_subnet_id"])
 
@@ -98,7 +98,7 @@ class EBSSnapshotsFactory:
 
         # Create a new volume and attach to the instance
         self.volume = self._create_volume(subnet)
-        self.instance = self._launch_instance(ami_id, subnet)
+        self.instance = self._launch_instance(ami_id, subnet, region)
         self._attach_volume()
         # Open ssh connection
         self.ssh_conn = self._open_ssh_connection()
@@ -212,7 +212,7 @@ class EBSSnapshotsFactory:
 
         return security_group_id
 
-    def _create_snapshot_instance_profile(self):
+    def _create_snapshot_instance_profile(self, region):
         iam_resources_suffix = random_alphanumeric()
         snapshot_instance_role_name = f"SnapshotInstanceRole-{iam_resources_suffix}"
         snapshot_instance_profile_name = f"SnapshotInstanceProfile-{iam_resources_suffix}"
@@ -230,7 +230,8 @@ class EBSSnapshotsFactory:
             )
         if not self._snapshot_instance_profile:
             self.iam.attach_role_policy(
-                RoleName=snapshot_instance_role_name, PolicyArn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+                RoleName=snapshot_instance_role_name,
+                PolicyArn=f"arn:{get_arn_partition(region)}:iam::aws:policy/AmazonSSMManagedInstanceCore",
             )
             logging.info("Creating profile (%s).", snapshot_instance_profile_name)
             self._snapshot_instance_profile = self.iam.create_instance_profile(
@@ -243,8 +244,8 @@ class EBSSnapshotsFactory:
             InstanceProfileName=snapshot_instance_profile_name, RoleName=snapshot_instance_role_name
         )
 
-    def _launch_instance(self, ami_id, subnet):
-        self._create_snapshot_instance_profile()
+    def _launch_instance(self, ami_id, subnet, region):
+        self._create_snapshot_instance_profile(region)
         instance = retry(stop_max_attempt_number=5, wait_fixed=minutes(1))(self.ec2_resource.create_instances)(
             ImageId=ami_id,
             KeyName=self.config.key_name,
@@ -290,10 +291,10 @@ class EBSSnapshotsFactory:
         amis = sorted(response["Images"], key=lambda x: x["CreationDate"], reverse=True)
         return amis[0]["ImageId"]
 
-    def release_all(self):
+    def release_all(self, region):
         """Release all resources"""
         self._release_instance()
-        self._release_instance_iam()
+        self._release_instance_iam(region)
         self._release_security_group()
         self._release_volume()
         self._release_snapshot()
@@ -317,13 +318,14 @@ class EBSSnapshotsFactory:
 
         self.instance = None
 
-    def _release_instance_iam(self):
+    def _release_instance_iam(self, region):
         instance_profile_name = self._snapshot_instance_profile["InstanceProfile"]["InstanceProfileName"]
         instance_role_name = self._snapshot_instance_role["Role"]["RoleName"]
         if self._snapshot_instance_role:
             role_name = self._snapshot_instance_role["Role"]["RoleName"]
             self.iam.detach_role_policy(
-                RoleName=instance_role_name, PolicyArn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+                RoleName=instance_role_name,
+                PolicyArn=f"arn:{get_arn_partition(region)}:iam::aws:policy/AmazonSSMManagedInstanceCore",
             )
             logging.info("Deleting role: %s", role_name)
             self.iam.remove_role_from_instance_profile(
