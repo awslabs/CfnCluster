@@ -361,7 +361,7 @@ test-suites:
         # S3 bucket belonging to the same region and S3 VPC Endpoints only work within the region.
         - regions: ["us-east-1"]
           instances: {{ common.INSTANCES_DEFAULT_ARM }}
-          oss: [{{ OS_ARM_3 }}]
+          oss: [{{ DCV_OS_ARM_3 }}]
           schedulers: ["slurm"]
         - regions: ["cn-north-1"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}

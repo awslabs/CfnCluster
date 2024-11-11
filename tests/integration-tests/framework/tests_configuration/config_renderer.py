@@ -19,7 +19,7 @@ from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
 from utils import InstanceTypesData
 
-from pcluster.constants import SUPPORTED_OSES, UNSUPPORTED_OSES_FOR_DCV
+from pcluster.constants import SUPPORTED_OSES, UNSUPPORTED_ARM_OSES_FOR_DCV, UNSUPPORTED_OSES_FOR_DCV
 
 
 def _get_os_parameters(config=None, args=None):
@@ -39,8 +39,11 @@ def _get_os_parameters(config=None, args=None):
 
     # DCV doesn't support AL2023. Therefore, the following logic makes sure the DCV jinja parameter is not AL2023
     dcv_supported_oses = [os for os in SUPPORTED_OSES if os not in UNSUPPORTED_OSES_FOR_DCV]
+    dcv_supported_arm_oses = [
+        os for os in SUPPORTED_OSES if os not in UNSUPPORTED_OSES_FOR_DCV + UNSUPPORTED_ARM_OSES_FOR_DCV
+    ]
     dcv_available_amis_oss_x86 = list(set(dcv_supported_oses) & set(available_amis_oss_x86))
-    dcv_available_amis_oss_arm = list(set(dcv_supported_oses) & set(available_amis_oss_arm))
+    dcv_available_amis_oss_arm = list(set(dcv_supported_arm_oses) & set(available_amis_oss_arm))
     for index in range(len(dcv_supported_oses)):
         result[f"DCV_OS_X86_{index}"] = dcv_available_amis_oss_x86[
             (today_number + index) % len(dcv_available_amis_oss_x86)
