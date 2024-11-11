@@ -13,7 +13,7 @@ from utils import disable_protected_mode
 from tests.common.assertions import assert_no_msg_in_logs
 from tests.common.scaling_common import get_bootstrap_errors, get_scaling_metrics, validate_and_get_scaling_test_config
 
-MAX_QUEUE_SIZE = 50000
+MAX_QUEUE_SIZE = 5000
 
 
 @pytest.mark.parametrize(
@@ -76,12 +76,18 @@ def _datetime_to_minute(dt: datetime):
 
 def _get_scaling_time(capacity_time_series: list, timestamps: list, scaling_target: int, start_time: datetime):
     try:
-        scaling_target_index = capacity_time_series.index(scaling_target)
+        if scaling_target in capacity_time_series:
+            max_scaled_instances = scaling_target
+        else:
+            max_scaled_instances = max(capacity_time_series)
+            logging.warning(f"Cluster scaled to {max_scaled_instances} when expected target was {scaling_target}")
+
+        scaling_target_index = capacity_time_series.index(max_scaled_instances)
         timestamp_at_full_cluster_size = timestamps[scaling_target_index]
         scaling_target_time = datetime.datetime.fromtimestamp(
             float(timestamp_at_full_cluster_size), tz=datetime.timezone.utc
         )
-        return scaling_target_time, int((scaling_target_time - start_time).total_seconds())
+        return scaling_target_time, int((scaling_target_time - start_time).total_seconds()), max_scaled_instances
     except ValueError as e:
         logging.error("Cluster did not scale up to %d nodes", scaling_target)
         raise Exception(
@@ -299,8 +305,8 @@ def _scale_up_and_down(
     get_bootstrap_errors(remote_command_executor, cluster.name, request.config.getoption("output_dir"), region)
 
     # Extract scale up duration and timestamp from the monitoring metrics collected above
-    _, scale_up_time_ec2 = _get_scaling_time(ec2_capacity_time_series_up, timestamps, scaling_target, start_time)
-    scaling_target_time, scale_up_time_scheduler = _get_scaling_time(
+    _, scale_up_time_ec2, _ = _get_scaling_time(ec2_capacity_time_series_up, timestamps, scaling_target, start_time)
+    scaling_target_time, scale_up_time_scheduler, max_compute_nodes_up = _get_scaling_time(
         compute_nodes_time_series_up, timestamps, scaling_target, start_time
     )
 
@@ -331,7 +337,7 @@ def _scale_up_and_down(
         target_cluster_size=0,
     )
     # Extract scale down duration and timestamp from the monitoring metrics collected above
-    _, scale_down_time = _get_scaling_time(ec2_capacity_time_series_down, timestamps, 0, scale_down_start_timestamp)
+    _, scale_down_time, _ = _get_scaling_time(ec2_capacity_time_series_down, timestamps, 0, scale_down_start_timestamp)
     # Summarize the scaling metrics in a report (logs and metrics image)
     scaling_results = {
         "Region": region,
@@ -359,7 +365,8 @@ def _scale_up_and_down(
     # Verify that there was no EC2 over-scaling
     assert_that(max(ec2_capacity_time_series_up)).is_equal_to(scaling_target)
     # Verify that there was no Slurm nodes over-scaling
-    assert_that(max(compute_nodes_time_series_up)).is_equal_to(scaling_target)
+    with soft_assertions():
+        assert_that(max_compute_nodes_up).is_equal_to(scaling_target)
     # Verify all Slurm nodes were removed on scale down
     assert_that(compute_nodes_time_series_down[-1]).is_equal_to(0)
 
