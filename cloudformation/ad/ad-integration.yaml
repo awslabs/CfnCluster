@@ -68,6 +68,30 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Directory
+        Parameters:
+          - DirectoryType
+          - DomainName
+          - Vpc
+          - PrivateSubnetOne
+          - PrivateSubnetTwo
+      - Label:
+          default: Users
+        Parameters:
+          - AdminPassword
+          - ReadOnlyPassword
+          - UserNames
+          - UserPassword
+      - Label:
+          default: Administrative Node
+        Parameters:
+          - AdminNodeAmiId
+          - Keypair
+
 Transform: AWS::Serverless-2016-10-31
 
 Conditions:
