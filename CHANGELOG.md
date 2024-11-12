@@ -3,6 +3,9 @@ CHANGELOG
 3.12.0
 ------
 
+**ENHANCEMENTS**
+- Add new build image configuration section `Build/Installation` to turn on/off Nvidia software and Lustre client installations. By default, Nvidia software, although included in official ParallelCluster AMIs, is not installed by `build-image`. By default, Lustre client is installed.
+
 **CHANGES**
 - The CLI commands `export-cluster-logs` and `export-image-logs` can now by default export the logs to the default ParallelCluster bucket or to the CustomS3Bucket if specified in the config.
 

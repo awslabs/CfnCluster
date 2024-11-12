@@ -21,10 +21,9 @@ Build:
 {% endif %}
 {% if os in ["ubuntu2204", "rhel9", "rocky9"] %}
 # Disable Lustre installation because these newer operating systems release new kernels more often. Lustre usually does not support the latest kernels
-DevSettings:
-  Cookbook:
-    ExtraChefAttributes: |
-      {"cluster": {"lustre": {"enabled": "no" }}}
+    Installation:
+        LustreClient:
+            Enabled: false
 {% endif %}
 
 CustomS3Bucket: {{ bucket_name }}
