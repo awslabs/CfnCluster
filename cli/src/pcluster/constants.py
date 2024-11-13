@@ -231,7 +231,7 @@ class Feature(Enum):
     """
 
     BATCH = "AWS Batch scheduler"
-    DCV = "NICE DCV"
+    DCV = "Amazon DCV"
     FSX_LUSTRE = "FSx Lustre"
     FILE_CACHE = "FileCache"
     FSX_ONTAP = "FSx ONTAP"

@@ -1037,7 +1037,7 @@ class DcvValidator(Validator):
             allowed_oses = get_supported_dcv_os(architecture)
             if os not in allowed_oses:
                 self._add_failure(
-                    f"NICE DCV can be used with one of the following operating systems "
+                    f"Amazon DCV can be used with one of the following operating systems "
                     f"when using {architecture} architecture: {allowed_oses}. "
                     "Please double check the os configuration.",
                     FailureLevel.ERROR,
@@ -1046,7 +1046,7 @@ class DcvValidator(Validator):
             if re.search(r"(micro)|(nano)", instance_type):
                 self._add_failure(
                     "The packages required for desktop virtualization in the selected instance type '{0}' "
-                    "may cause instability of the instance. If you want to use NICE DCV it is recommended "
+                    "may cause instability of the instance. If you want to use Amazon DCV it is recommended "
                     "to use an instance type with at least 1.7 GB of memory.".format(instance_type),
                     FailureLevel.WARNING,
                 )
