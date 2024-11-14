@@ -446,6 +446,35 @@ def _test_no_updatable_custom_actions(base_conf, target_conf):
     )
 
 
+def _test_no_updatable_custom_actions_sequence(base_conf, target_conf):
+    base_conf["HeadNode"].update(
+        {
+            "CustomActions": {
+                "OnNodeConfigured": {"Sequence": [{"Script": "test-to-edit.sh", "Args": ["1", "2"]}]},
+            }
+        }
+    )
+    target_conf["HeadNode"].update(
+        {"CustomActions": {"OnNodeConfigured": {"Sequence": [{"Script": "test-to-edit.sh", "Args": ["2"]}]}}}
+    )
+
+    _check_patch(
+        base_conf,
+        target_conf,
+        [
+            Change(
+                ["HeadNode", "CustomActions", "OnNodeConfigured"],
+                "Sequence",
+                [{"Script": "test-to-edit.sh", "Args": ["1", "2"]}],
+                [{"Script": "test-to-edit.sh", "Args": ["2"]}],
+                UpdatePolicy.UNSUPPORTED,
+                is_list=False,
+            ),
+        ],
+        UpdatePolicy.UNSUPPORTED,
+    )
+
+
 def _test_updatable_custom_actions_attributes(base_conf, target_conf):
     base_conf["HeadNode"].update(
         {"CustomActions": {"OnNodeUpdated": {"Script": "test-to-edit.sh", "Args": ["1", "2"]}}}
@@ -490,6 +519,94 @@ def _test_updatable_custom_actions(base_conf, target_conf):
                 "OnNodeUpdated",
                 {"Script": "test-to-remove.sh"},
                 "-",
+                UpdatePolicy.SUPPORTED,
+                is_list=False,
+            ),
+        ],
+        UpdatePolicy.SUPPORTED,
+    )
+
+
+def _test_updatable_custom_actions_sequence_add(base_conf, target_conf):
+    target_conf["HeadNode"].update(
+        {"CustomActions": {"OnNodeUpdated": {"Sequence": [{"Script": "test-to-remove.sh"}]}}}
+    )
+
+    _check_patch(
+        base_conf,
+        target_conf,
+        [
+            Change(
+                ["HeadNode", "CustomActions"],
+                "OnNodeUpdated",
+                "-",
+                {"Sequence": [{"Script": "test-to-remove.sh"}]},
+                UpdatePolicy.SUPPORTED,
+                is_list=False,
+            ),
+        ],
+        UpdatePolicy.SUPPORTED,
+    )
+
+
+def _test_updatable_custom_actions_sequence_change(base_conf, target_conf):
+    base_conf["HeadNode"].update({"CustomActions": {"OnNodeUpdated": {"Sequence": [{"Script": "test-to-remove.sh"}]}}})
+    target_conf["HeadNode"].update(
+        {"CustomActions": {"OnNodeUpdated": {"Sequence": [{"Script": "another-script.sh"}]}}}
+    )
+
+    _check_patch(
+        base_conf,
+        target_conf,
+        [
+            Change(
+                ["HeadNode", "CustomActions", "OnNodeUpdated"],
+                "Sequence",
+                [{"Script": "test-to-remove.sh"}],
+                [{"Script": "another-script.sh"}],
+                UpdatePolicy.SUPPORTED,
+                is_list=False,
+            ),
+        ],
+        UpdatePolicy.SUPPORTED,
+    )
+
+
+def _test_updatable_custom_actions_sequence_remove(base_conf, target_conf):
+    base_conf["HeadNode"].update({"CustomActions": {"OnNodeUpdated": {"Sequence": [{"Script": "test-to-remove.sh"}]}}})
+
+    _check_patch(
+        base_conf,
+        target_conf,
+        [
+            Change(
+                ["HeadNode", "CustomActions"],
+                "OnNodeUpdated",
+                {"Sequence": [{"Script": "test-to-remove.sh"}]},
+                "-",
+                UpdatePolicy.SUPPORTED,
+                is_list=False,
+            ),
+        ],
+        UpdatePolicy.SUPPORTED,
+    )
+
+
+def _test_updatable_custom_actions_single_to_sequence(base_conf, target_conf):
+    base_conf["HeadNode"].update({"CustomActions": {"OnNodeUpdated": {"Script": "test-to-remove.sh"}}})
+    target_conf["HeadNode"].update(
+        {"CustomActions": {"OnNodeUpdated": {"Sequence": [{"Script": "another-script.sh"}]}}}
+    )
+
+    _check_patch(
+        base_conf,
+        target_conf,
+        [
+            Change(
+                ["HeadNode", "CustomActions"],
+                "OnNodeUpdated",
+                {"Script": "test-to-remove.sh"},
+                {"Sequence": [{"Script": "another-script.sh"}]},
                 UpdatePolicy.SUPPORTED,
                 is_list=False,
             ),
@@ -912,8 +1029,13 @@ def _test_iam(base_conf, target_conf):
         _test_compute_resources,
         _test_queues,
         _test_no_updatable_custom_actions,
+        _test_no_updatable_custom_actions_sequence,
         _test_updatable_custom_actions,
         _test_updatable_custom_actions_attributes,
+        _test_updatable_custom_actions_sequence_add,
+        _test_updatable_custom_actions_sequence_change,
+        _test_updatable_custom_actions_sequence_remove,
+        _test_updatable_custom_actions_single_to_sequence,
         _test_storage,
         _test_iam,
     ],

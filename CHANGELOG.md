@@ -10,7 +10,8 @@ CHANGELOG
 - The CLI commands `export-cluster-logs` and `export-image-logs` can now by default export the logs to the default ParallelCluster bucket or to the CustomS3Bucket if specified in the config.
 
 **BUG FIXES**
-- When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003
+- When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
+- Fix an issue where changes in sequence of custom actions scripts were not detected during cluster updates. 
 
 3.11.1
 ------
