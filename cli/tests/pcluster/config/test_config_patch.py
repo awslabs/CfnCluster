@@ -59,12 +59,18 @@ def _compare_changes(changes, expected_changes):
         is_old_value_equal = (
             source.old_value["Name"] == target.old_value["Name"]
             if isinstance(source.old_value, dict) and "Name" in source.old_value
-            else source.old_value == target.old_value
+            else (
+                source.old_value == target.old_value
+                or (source.old_value in ["-", None] and target.old_value in ["-", None])
+            )
         )
         is_new_value_equal = (
             source.new_value["Name"] == target.new_value["Name"]
             if isinstance(source.new_value, dict) and "Name" in source.new_value
-            else source.new_value == target.new_value
+            else (
+                source.new_value == target.new_value
+                or (source.new_value in ["-", None] and target.new_value in ["-", None])
+            )
         )
 
         return (
@@ -89,6 +95,7 @@ def _compare_changes(changes, expected_changes):
     sorted_changes = sorted(changes, key=_sorting_func)
     sorted_expected_changes = sorted(expected_changes, key=_sorting_func)
 
+    assert_that(sorted_changes).is_length(len(expected_changes))
     assert_that(
         all([_compare_change(source, target) for source, target in zip(sorted_changes, sorted_expected_changes)])
     ).is_true()
@@ -859,11 +866,11 @@ def _test_iam(base_conf, target_conf):
     # Check the update of Iam section with both updatable and not updatable keys
     for iam_section_child_key, iam_section_child_value in {
         "ResourcePrefix": {"old_config_value": "/path/name-prefix", "expected_update_policy": UpdatePolicy.UNSUPPORTED},
-        "PermissionBoundary": {
+        "PermissionsBoundary": {
             "old_config_value": "arn:aws:iam::aws:policy/some_old_permission_boundary",
             "expected_update_policy": UpdatePolicy.SUPPORTED,
         },
-        "Role": {
+        "Roles": {
             "old_config_value": {"LambdaFunctionsRole": "arn:aws:iam::aws:role/some_old_role"},
             "expected_update_policy": UpdatePolicy.SUPPORTED,
         },
