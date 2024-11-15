@@ -51,6 +51,13 @@ def _get_os_parameters(config=None, args=None):
         result[f"DCV_OS_ARM_{index}"] = dcv_available_amis_oss_arm[
             (today_number + index) % len(dcv_available_amis_oss_arm)
         ]
+
+    no_rhel_oss = [os for os in SUPPORTED_OSES if "rhel" not in os]
+    no_rhel_oss_x86 = list(set(no_rhel_oss) & set(available_amis_oss_x86))
+    no_rhel_oss_arm = list(set(no_rhel_oss) & set(available_amis_oss_arm))
+    for index in range(len(no_rhel_oss)):
+        result[f"NO_RHEL_OS_X86_{index}"] = no_rhel_oss_x86[(today_number + index) % len(no_rhel_oss_x86)]
+        result[f"NO_RHEL_OS_ARM_{index}"] = no_rhel_oss_arm[(today_number + index) % len(no_rhel_oss_arm)]
     return result
 
 
