@@ -8,10 +8,16 @@ CHANGELOG
 
 **CHANGES**
 - The CLI commands `export-cluster-logs` and `export-image-logs` can now by default export the logs to the default ParallelCluster bucket or to the CustomS3Bucket if specified in the config.
+- Upgrade Amazon DCV to version `2024.0-18131`.
+  - server: `2024.0-18131-1`
+  - xdcv: `2024.0.631-1`
+  - gl: `2024.0.1078-1`
+  - web_viewer: `2024.0-18131-1`
+- Upgrade mysql-community-client to version 8.0.39.
 
 **BUG FIXES**
 - When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
-- Fix an issue where changes in sequence of custom actions scripts were not detected during cluster updates. 
+- Fix an issue where changes in sequence of custom actions scripts were not detected during cluster updates.
 - Add missing permissions for ParallelCluster API to create the service linked roles for Elastic Load Balancing and Auto Scaling, that are required to deploy login nodes.
 
 3.11.1
@@ -26,8 +32,8 @@ CHANGELOG
 **BUG FIXES**
 - Fix an issue in the way we configure the Pyxis Slurm plugin in ParallelCluster that can lead to job submission failures.
   https://github.com/aws/aws-parallelcluster/issues/6459
-- Fix an issue that was causing failing deployment in configurations with login nodes 
-  by add missing permissions required by login nodes in the public template of policies. 
+- Fix an issue that was causing failing deployment in configurations with login nodes
+  by add missing permissions required by login nodes in the public template of policies.
   https://github.com/aws/aws-parallelcluster/issues/6483
 
 3.11.0
@@ -44,8 +50,8 @@ CHANGELOG
 - Install enroot and pyxis in official pcluster AMIs
 
 **CHANGES**
-- *[BREAKING]* The `loginNodes` field returned by the API `DescribeCluster` and the CLI command `describe-cluster` 
-  has been changed from a dictionary to an array to support multiple pools of login nodes. 
+- *[BREAKING]* The `loginNodes` field returned by the API `DescribeCluster` and the CLI command `describe-cluster`
+  has been changed from a dictionary to an array to support multiple pools of login nodes.
   This change breaks backward compatibility, making these operations incompatible with clusters deployed with older versions.
 - Upgrade Slurm to 23.11.10 (from 23.11.7).
 - Upgrade Pmix to 5.0.3 (from 5.0.2).
@@ -119,7 +125,7 @@ CHANGELOG
   `IMPORT_*`, `REVIEW_IN_PROGRESS` and `UPDATE_FAILED`.
 - Fix an issue that prevented cluster updates from including EFS filesystems with encryption in transit.
 - Fix an issue that prevented slurmctld and slurmdbd services from restarting on head node reboot when
-  EFS is used for shared internal data. 
+  EFS is used for shared internal data.
 - On Ubuntu systems, remove default logrotate configuration for cloud-init log files that clashed with the
   configuration coming from Parallelcluster.
 - Fix image build failure with RHEL 8.10 or newer.
@@ -131,7 +137,7 @@ CHANGELOG
 - Add support for FSx Lustre as a shared storage type in us-iso-east-1.
 
 **BUG FIXES**
-- Remove `cloud_dns` from the `SlurmctldParameters` in the Slurm config to avoid Slurm fanout issues.  
+- Remove `cloud_dns` from the `SlurmctldParameters` in the Slurm config to avoid Slurm fanout issues.
   This is also not required since we set the IP addresses on instance launch.
 
 3.9.2
