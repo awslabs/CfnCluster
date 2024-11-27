@@ -14,6 +14,7 @@ CHANGELOG
   - gl: `2024.0.1078-1`
   - web_viewer: `2024.0-18131-1`
 - Upgrade mysql-community-client to version 8.0.39.
+- Remove support for Python 3.7 and 3.8, which are in end of life.
 
 **BUG FIXES**
 - When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
