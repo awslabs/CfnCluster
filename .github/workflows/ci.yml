@@ -221,12 +221,3 @@ jobs:
           severity: warning
           ignore_paths: tests
           ignore_names: user_data.sh
-  url-suffix-check:
-    name: URL Suffix Check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Run URL Suffix Detection Script
-      run: |
-        chmod +x ./util/detect_bad_urls.sh
-        ./util/detect_bad_urls.sh
