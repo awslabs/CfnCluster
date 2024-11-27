@@ -11,5 +11,5 @@ jobs:
     - name: Check PR for Disallowed URL Suffixes
       uses: francesco-giordano/gh-pr-content-checker@v1.0.0
       with:
-        diffDoesNotContainRegex: "amazonaws\.com|amazonaws\.com\.cn|c2s\.ic\.gov|sc2s\.sgov\.gov"
+        diffDoesNotContainRegex: "amazonaws\\.com|amazonaws\\.com\\.cn|c2s\\.ic\\.gov|sc2s\\.sgov\\.gov"
         skipLabels: skip-bad-url-suffix-check
