@@ -115,13 +115,13 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                 "queue1-i1": {
                     "instances": [
                         {
-                            "instance_type": "c5.xlarge",
+                            "instance_type": "c5.large",
                         },
                         {
-                            "instance_type": "c5n.xlarge",
+                            "instance_type": "c5n.large",
                         },
                         {
-                            "instance_type": "c5d.xlarge",
+                            "instance_type": "c5d.large",
                         },
                     ],
                     "expected_running_instances": 1,
@@ -199,8 +199,8 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
 
     # Here is the expected list of nodes.
     # the cluster:
-    # queue1-st-c5xlarge-1
-    # queue1-st-c5xlarge-2
+    # queue1-st-c5large-1
+    # queue1-st-c5large-2
     retry(wait_fixed=seconds(20), stop_max_delay=minutes(5))(assert_initial_conditions)(
         slurm_commands, 2, 0, partition="queue1"
     )
@@ -210,13 +210,13 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                 "queue1-i1": {
                     "instances": [
                         {
-                            "instance_type": "c5.xlarge",
+                            "instance_type": "c5.large",
                         },
                         {
-                            "instance_type": "c5n.xlarge",
+                            "instance_type": "c5n.large",
                         },
                         {
-                            "instance_type": "c5d.xlarge",
+                            "instance_type": "c5d.large",
                         },
                     ],
                     "expected_running_instances": 2,
@@ -591,7 +591,7 @@ def test_update_instance_list(
         submit_command_args={"command": "sleep 1000", "nodes": 1, "other_options": "--exclusive"}
     )
     # Check instance type is the expected for min count
-    _check_instance_type(ec2, instances, "c5d.xlarge")
+    _check_instance_type(ec2, instances, "c5d.large")
 
     # Update cluster with new configuration, adding new instance type with lower price
     updated_config_file = pcluster_config_reader(bucket_name=bucket_name, config_file="pcluster.config.update.yaml")
@@ -609,7 +609,7 @@ def test_update_instance_list(
     logging.info(new_instances)
     new_instances.remove(instances[0])
     # Check new instance type is the expected one, i.e. the one with lower price.
-    _check_instance_type(ec2, new_instances, "c5.xlarge")
+    _check_instance_type(ec2, new_instances, "c5.large")
 
     # Update cluster removing instance type from the list
     updated_config_file = pcluster_config_reader(
