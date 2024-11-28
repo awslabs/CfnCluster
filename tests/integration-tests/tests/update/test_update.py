@@ -133,7 +133,16 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                     "instances": [
                         {
                             "instance_type": "t3.small",
-                        }
+                        },
+                        {
+                            "instance_type": "t3a.small",
+                        },
+                        {
+                            "instance_type": "t3.medium",
+                        },
+                        {
+                            "instance_type": "t3a.medium",
+                        },
                     ],
                     "expected_running_instances": 1,
                     "expected_power_saved_instances": 9,
@@ -240,7 +249,16 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                     "instances": [
                         {
                             "instance_type": "t3.small",
-                        }
+                        },
+                        {
+                            "instance_type": "t3a.small",
+                        },
+                        {
+                            "instance_type": "t3.medium",
+                        },
+                        {
+                            "instance_type": "t3a.medium",
+                        },
                     ],
                     "expected_running_instances": 0,
                     "expected_power_saved_instances": 10,
