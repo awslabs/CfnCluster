@@ -15,6 +15,9 @@ CHANGELOG
   - web_viewer: `2024.0-18131-1`
 - Upgrade mysql-community-client to version 8.0.39.
 - Remove support for Python 3.7 and 3.8, which are in end of life.
+- Upgrade Werkzeug to version 3.1.3.
+- Upgrade Connexion to version 3.1.x.
+- Upgrade Flask to version 3.1.0.
 
 **BUG FIXES**
 - When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
