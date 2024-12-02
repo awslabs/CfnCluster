@@ -99,3 +99,15 @@ through unit tests and integration tests that exercise the operations.
 In order to test the API specifically, there are integraiton tests which will deploy the API and test the functionality using
 the generated client.
 
+### Invoking the API
+
+Install requirements for the example:
+```
+pip install -r client/requirements.txt
+```
+
+Invoke a deployed ParallelCluster API:
+```
+python client/example.py --region [REGION] --stack-name [PCAPI_STACK_NAME]
+```
+
