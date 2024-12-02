@@ -9,6 +9,7 @@ import functools
 import logging
 import os
 import pickle
+import re
 import time
 from dataclasses import dataclass, field
 from inspect import getfullargspec, isgeneratorfunction
@@ -17,7 +18,7 @@ from typing import Any, Callable, Set
 
 import pytest
 from filelock import FileLock
-from psutil import STATUS_ZOMBIE, NoSuchProcess, Process
+from psutil import STATUS_DEAD, STATUS_ZOMBIE, NoSuchProcess, Process
 from xdist import get_xdist_worker_id
 
 
@@ -53,6 +54,7 @@ class SharedFixture:
         fixture_func_args: tuple,
         fixture_func_kwargs: dict,
         xdist_worker_id_and_pid: str,
+        log_file: str,
     ):
         self.name = name
         self.shared_save_location = shared_save_location
@@ -60,6 +62,7 @@ class SharedFixture:
         self.fixture_func_args = fixture_func_args
         self.fixture_func_kwargs = fixture_func_kwargs
         self.xdist_worker_id_and_pid = xdist_worker_id_and_pid
+        self.log_file = log_file
         self._lock_file = shared_save_location / f"{name}.lock"
         self._fixture_file = shared_save_location / f"{name}.fixture"
         self._generator = None
@@ -81,7 +84,9 @@ class SharedFixture:
     @staticmethod
     def _is_valid_process(pid: int) -> bool:
         try:
-            return Process(pid).status() != STATUS_ZOMBIE
+            status = Process(pid).status()
+            logging.info("Process %s status: %s", pid, status)
+            return status not in [STATUS_ZOMBIE, STATUS_DEAD]
         except NoSuchProcess:
             return False
 
@@ -92,6 +97,19 @@ class SharedFixture:
             Process(pid).terminate()
         except Exception:
             logging.error("Error terminating process %s.", pid)
+
+    @staticmethod
+    def _completed_in_the_past(minutes: int, line: str):
+        if line is None or "- Completed test" not in line:
+            return False
+        regex = r"^(.*?) \- .*"
+        re_result = re.search(regex, line)
+        if re_result:
+            date = re_result.group(1)
+            try:
+                return (time.time() - time.mktime(time.strptime(date, "%Y-%m-%d %H:%M:%S,%f"))) / 60 > minutes
+            except Exception:
+                return False
 
     def release(self):
         """
@@ -117,6 +135,16 @@ class SharedFixture:
             )
             time.sleep(30)
 
+            last_message_of_each_proc = {}
+            with open(self.log_file, "r") as f:
+                lines = f.readlines()
+                for line in lines:
+                    regex = r"^.* \- .* \- (\d+) - .*"
+                    re_result = re.search(regex, line)
+                    if re_result:
+                        pid = re.search(regex, line).group(1)
+                        last_message_of_each_proc[pid] = line
+
             with FileLock(self._lock_file):
                 for worker in data.currently_using_processes.copy():
                     pid = int(worker.split(" ")[1])
@@ -130,6 +158,11 @@ class SharedFixture:
                             data.counter,
                         )
                         self._save_fixture_data(data)
+                    elif self._completed_in_the_past(30, last_message_of_each_proc.get(str(pid))):
+                        logging.warning(
+                            "%s is sleeping but the test has been finished. Terminating the process... ", worker
+                        )
+                        self._terminate_process(pid)
                 data = self._load_fixture_data()
 
             if time.time() > timeout:
@@ -220,9 +253,12 @@ def xdist_session_fixture(**pytest_fixture_args):
                 fixture_func_args=args,
                 fixture_func_kwargs=kwargs,
                 xdist_worker_id_and_pid=f"{xdist_worker_id}: {pid}",
+                log_file=request.config.getoption("tests_log_file"),
             )
-            yield shared_fixture.acquire().fixture_return_value
-            shared_fixture.release()
+            try:
+                yield shared_fixture.acquire().fixture_return_value
+            finally:
+                shared_fixture.release()
 
         return _xdist_session_fixture
 

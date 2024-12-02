@@ -5,3 +5,4 @@ test-suites:
         - regions: ["us-east-1"]
           oss: ["alinux2", "ubuntu2204", "ubuntu2004", "rhel8", "rocky8"]
           schedulers: ["slurm"]
+          instances: ["t3.micro"] #This is a placeholder, we do not use this instance in the test

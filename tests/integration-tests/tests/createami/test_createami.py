@@ -121,13 +121,23 @@ def test_build_image(
 
     # Get custom S3 bucket
     bucket_name = s3_bucket_factory()
+    _set_s3_bucket_policy(bucket_name, get_arn_partition(region), region)
 
     # Get base AMI
-    # remarkable AMIs are not available for ARM and ubuntu2204 yet
-    if os not in ["ubuntu2204", "alinux2023"]:
+    if os in ["alinux2", "ubuntu2004"]:
+        # Test Deep Learning AMIs
         base_ami = retrieve_latest_ami(region, os, ami_type="remarkable", architecture=architecture)
+    elif "rhel" in os or "rocky" in os or "ubuntu" in os:
+        # Test AMIs from first stage build. Because RHEL/Rocky and Ubuntu have specific requirement of kernel versions.
+        try:
+            base_ami = retrieve_latest_ami(region, os, ami_type="first_stage", architecture=architecture)
+        except IndexError:  # If first stage AMI is not available, use official AMI.
+            # Therefore, the test tries to succeed at best effort.
+            logging.info("First stage AMI not available, using official AMI instead.")
+            base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
     else:
-        base_ami = retrieve_latest_ami(region, os, architecture=architecture)
+        # Test vanilla AMIs.
+        base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
 
     image_config = pcluster_config_reader(
         config_file="image.config.yaml", parent_image=base_ami, instance_role=instance_role, bucket_name=bucket_name
@@ -154,6 +164,7 @@ def test_build_image(
         _test_get_image_log_events(image)
         _test_list_images(image)
         _test_export_logs(s3_bucket_factory, image, region)
+        _test_export_logs(s3_bucket_factory, image, region, True)
 
     _test_cluster_creation(
         image.ec2_image_id, pcluster_config_reader, region, clusters_factory, scheduler_commands_factory
@@ -309,12 +320,7 @@ def _test_get_image_log_events(image):
             assert_that(events[0]["message"]).does_not_contain(first_event["message"])
 
 
-def _test_export_logs(s3_bucket_factory, image, region):
-    bucket_name = s3_bucket_factory()
-    logging.info("bucket is %s", bucket_name)
-
-    # set bucket permissions
-    partition = get_arn_partition(region)
+def _set_s3_bucket_policy(bucket_name, partition, region):
     bucket_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -322,22 +328,44 @@ def _test_export_logs(s3_bucket_factory, image, region):
                 "Action": "s3:GetBucketAcl",
                 "Effect": "Allow",
                 "Resource": f"arn:{partition}:s3:::{bucket_name}",
-                "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
+                "Principal": {"Service": f"logs.{region}.amazonaws.com"},
             },
             {
                 "Action": "s3:PutObject",
                 "Effect": "Allow",
                 "Resource": f"arn:{partition}:s3:::{bucket_name}/*",
                 "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
-                "Principal": {"Service": f"logs.{image.region}.amazonaws.com"},
+                "Principal": {"Service": f"logs.{region}.amazonaws.com"},
             },
         ],
     }
     boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+
+
+def _test_export_logs(s3_bucket_factory, image, region, use_pcluster_bucket=False):
+    if not use_pcluster_bucket:
+        bucket_name = s3_bucket_factory()
+        logging.info("bucket is %s", bucket_name)
+
+        # set bucket permissions
+        partition = get_arn_partition(region)
+        _set_s3_bucket_policy(bucket_name, partition, image.region)
+    else:
+        logging.info("Using default pcluster bucket.")
+
     with tempfile.TemporaryDirectory() as tempdir:
         output_file = f"{tempdir}/testfile.tar.gz"
         bucket_prefix = "test_prefix"
-        ret = image.export_logs(bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix)
+
+        if not use_pcluster_bucket:
+            ret = retry(wait_fixed=seconds(20), stop_max_delay=minutes(10))(image.export_logs)(
+                bucket=bucket_name, output_file=output_file, bucket_prefix=bucket_prefix
+            )
+        else:
+            ret = retry(wait_fixed=seconds(20), stop_max_delay=minutes(10))(image.export_logs)(
+                output_file=output_file, bucket_prefix=bucket_prefix
+            )
+
         assert_that(ret["path"]).contains(output_file)
 
         rexp = rf"{image.image_id}-logs.*/cloudwatch-logs/{get_installed_parallelcluster_base_version()}-1"

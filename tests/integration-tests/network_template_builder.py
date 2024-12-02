@@ -28,6 +28,7 @@ from troposphere.ec2 import (
     VPCGatewayAttachment,
 )
 from troposphere.iam import InstanceProfile, Role
+from utils import get_arn_partition
 
 TAGS_PREFIX = "ParallelCluster"
 BASTION_INSTANCE_TYPE = "c5.large"
@@ -302,7 +303,7 @@ class NetworkTemplateBuilder:
     def __bastion_instance_profile(self):
         instance_role = Role(
             "BastionNetworkingRole",
-            ManagedPolicyArns=["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"],
+            ManagedPolicyArns=[f"arn:{get_arn_partition(self.__region)}:iam::aws:policy/AmazonSSMManagedInstanceCore"],
             AssumeRolePolicyDocument={
                 "Version": "2012-10-17",
                 "Statement": [

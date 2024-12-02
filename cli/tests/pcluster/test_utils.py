@@ -607,3 +607,94 @@ class TestAsyncUtils(unittest.TestCase):
 def test_is_feature_supported(feature, region, expected_result):
     actual_result = utils.is_feature_supported(feature=feature, region=region)
     assert_that(actual_result).is_equal_to(expected_result)
+
+
+@pytest.mark.parametrize(
+    "service_name, partition, region, regional, expected_result, expected_exception",
+    [
+        pytest.param(
+            "ANY_SERVICE",
+            "ANY_PARTITION",
+            None,
+            False,
+            "ANY_SERVICE.A_DOMAIN_SUFFIX",
+            None,
+            id="Non-regional service principal",
+        ),
+        pytest.param(
+            "ANY_SERVICE",
+            "ANY_PARTITION",
+            "ANY_REGION",
+            True,
+            "ANY_SERVICE.ANY_REGION.A_DOMAIN_SUFFIX",
+            None,
+            id="Regional service principal",
+        ),
+        pytest.param(
+            "ANY_SERVICE",
+            "ANY_PARTITION",
+            None,
+            True,
+            None,
+            ValueError("Region must be provided when 'regional' is True."),
+            id="Regional=True without region provided",
+        ),
+    ],
+)
+def test_get_service_principal(service_name, mocker, partition, region, regional, expected_result, expected_exception):
+    """Test get_service_principal with various inputs."""
+    url_domain_suffix_mock = mocker.patch("pcluster.utils.get_url_domain_suffix", return_value="A_DOMAIN_SUFFIX")
+    if expected_exception:
+        with pytest.raises(ValueError, match=str(expected_exception)):
+            utils.get_service_principal(service_name, partition, region, regional)
+    else:
+        result = utils.get_service_principal(service_name, partition, region, regional)
+        url_domain_suffix_mock.assert_called_once()
+        assert_that(result).is_equal_to(expected_result)
+
+
+@pytest.mark.parametrize(
+    "partition, service, region, account, resource, expected_result",
+    [
+        pytest.param(
+            "ANY_PARTITION",
+            "ANY_SERVICE",
+            "ANY_REGION",
+            "ANY_ACCOUNT_ID",
+            "ANY_RESOURCE",
+            "arn:ANY_PARTITION:ANY_SERVICE:ANY_REGION:ANY_ACCOUNT_ID:ANY_RESOURCE",
+            id="All fields provided",
+        ),
+        pytest.param(
+            "ANY_PARTITION",
+            "ANY_SERVICE",
+            "",
+            "ANY_ACCOUNT_ID",
+            "ANY_RESOURCE",
+            "arn:ANY_PARTITION:ANY_SERVICE::ANY_ACCOUNT_ID:ANY_RESOURCE",
+            id="Empty region",
+        ),
+        pytest.param(
+            "ANY_PARTITION",
+            "ANY_SERVICE",
+            "ANY_REGION",
+            "",
+            "ANY_RESOURCE",
+            "arn:ANY_PARTITION:ANY_SERVICE:ANY_REGION::ANY_RESOURCE",
+            id="Empty account",
+        ),
+        pytest.param(
+            "ANY_PARTITION",
+            "ANY_SERVICE",
+            "",
+            "",
+            "ANY_RESOURCE",
+            "arn:ANY_PARTITION:ANY_SERVICE:::ANY_RESOURCE",
+            id="Empty region and account",
+        ),
+    ],
+)
+def test_format_arn(partition, service, region, account, resource, expected_result):
+    """Test format_arn with various inputs."""
+    result = utils.format_arn(partition, service, region, account, resource)
+    assert_that(result).is_equal_to(expected_result)

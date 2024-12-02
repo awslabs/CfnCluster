@@ -19,7 +19,7 @@ from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
 from utils import InstanceTypesData
 
-from pcluster.constants import SUPPORTED_OSES
+from pcluster.constants import SUPPORTED_OSES, UNSUPPORTED_ARM_OSES_FOR_DCV, UNSUPPORTED_OSES_FOR_DCV
 
 
 def _get_os_parameters(config=None, args=None):
@@ -36,6 +36,28 @@ def _get_os_parameters(config=None, args=None):
     for index in range(len(SUPPORTED_OSES)):
         result[f"OS_X86_{index}"] = available_amis_oss_x86[(today_number + index) % len(available_amis_oss_x86)]
         result[f"OS_ARM_{index}"] = available_amis_oss_arm[(today_number + index) % len(available_amis_oss_arm)]
+
+    # DCV doesn't support AL2023. Therefore, the following logic makes sure the DCV jinja parameter is not AL2023
+    dcv_supported_oses = [os for os in SUPPORTED_OSES if os not in UNSUPPORTED_OSES_FOR_DCV]
+    dcv_supported_arm_oses = [
+        os for os in SUPPORTED_OSES if os not in UNSUPPORTED_OSES_FOR_DCV + UNSUPPORTED_ARM_OSES_FOR_DCV
+    ]
+    dcv_available_amis_oss_x86 = list(set(dcv_supported_oses) & set(available_amis_oss_x86))
+    dcv_available_amis_oss_arm = list(set(dcv_supported_arm_oses) & set(available_amis_oss_arm))
+    for index in range(len(dcv_supported_oses)):
+        result[f"DCV_OS_X86_{index}"] = dcv_available_amis_oss_x86[
+            (today_number + index) % len(dcv_available_amis_oss_x86)
+        ]
+        result[f"DCV_OS_ARM_{index}"] = dcv_available_amis_oss_arm[
+            (today_number + index) % len(dcv_available_amis_oss_arm)
+        ]
+
+    no_rhel_oss = [os for os in SUPPORTED_OSES if "rhel" not in os]
+    no_rhel_oss_x86 = list(set(no_rhel_oss) & set(available_amis_oss_x86))
+    no_rhel_oss_arm = list(set(no_rhel_oss) & set(available_amis_oss_arm))
+    for index in range(len(no_rhel_oss)):
+        result[f"NO_RHEL_OS_X86_{index}"] = no_rhel_oss_x86[(today_number + index) % len(no_rhel_oss_x86)]
+        result[f"NO_RHEL_OS_ARM_{index}"] = no_rhel_oss_arm[(today_number + index) % len(no_rhel_oss_arm)]
     return result
 
 

@@ -27,19 +27,10 @@ from paramiko import Ed25519Key
 from remote_command_executor import RemoteCommandExecutor
 from retrying import retry
 from time_utils import seconds
-from utils import (
-    find_stack_by_tag,
-    generate_stack_name,
-    is_directory_supported,
-    is_fsx_lustre_supported,
-    is_fsx_ontap_supported,
-    is_fsx_openzfs_supported,
-    random_alphanumeric,
-)
+from utils import find_stack_by_tag, generate_stack_name, is_directory_supported, random_alphanumeric
 
 from tests.ad_integration.cluster_user import ClusterUser
 from tests.common.utils import run_system_analyzer
-from tests.storage.test_fsx_lustre import create_fsx_ontap, create_fsx_open_zfs
 
 NUM_USERS_TO_CREATE = 5
 NUM_USERS_TO_TEST = 3
@@ -105,17 +96,6 @@ def get_ad_config_param_vals(
         "ldap_tls_req_cert": "never" if directory_certificate_verification is False else "hard",
         "private_subnet_id": directory_stack_outputs.get("PrivateSubnetIds").split(",")[0],
     }
-
-
-def get_fsx_ontap_config_param_vals(fsx_factory, svm_factory, vpc=None, subnet=None):
-    fsx_ontap_fs_id = create_fsx_ontap(fsx_factory, num=1, vpc=vpc, subnet=subnet)[0]
-    fsx_ontap_volume_id = svm_factory(fsx_ontap_fs_id)[0]
-    return {"fsx_ontap_volume_id": fsx_ontap_volume_id}
-
-
-def get_fsx_open_zfs_config_param_vals(fsx_factory, svm_factory, vpc=None, subnet=None):
-    fsx_open_zfs_volume_id = create_fsx_open_zfs(fsx_factory, num=1, vpc=vpc, subnet=subnet)[0]
-    return {"fsx_open_zfs_volume_id": fsx_open_zfs_volume_id}
 
 
 def _add_file_to_zip(zip_file, path, arcname):
@@ -203,10 +183,6 @@ def _get_stack_parameters(directory_type, vpc_stack, keypair):
         {"ParameterKey": "PrivateSubnetOne", "ParameterValue": private_subnet},
         {"ParameterKey": "PrivateSubnetTwo", "ParameterValue": private_subnets[0]},
         {"ParameterKey": "Keypair", "ParameterValue": keypair},
-        {
-            "ParameterKey": "AdminNodeAmiId",
-            "ParameterValue": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2",
-        },
     ]
     return stack_parameters
 
@@ -250,16 +226,8 @@ def _check_ssm_success(ssm_client, command_id, instance_id):
     ).is_true()
 
 
-@retry(stop_max_attempt_number=10, wait_exponential_multiplier=2000, wait_exponential_max=30000)
-def _delete_certificate(certificate_arn, region):
-    logging.info("Deleting IAM certificate %s in region %s", certificate_arn, region)
-    # Example of IAM Server Certificate ARN: arn:PARTITION:iam::ACCOUNT:server-certificate/CERTIFICATE_NAME
-    certificate_name = certificate_arn.split("/")[-1]
-    boto3.client("iam", region_name=region).delete_server_certificate(ServerCertificateName=certificate_name)
-
-
 @pytest.fixture(scope="class")
-def directory_factory(request, cfn_stacks_factory, vpc_stack, store_secret_in_secret_manager):  # noqa: C901
+def directory_factory(request, cfn_stacks_factory, vpc_stack):  # noqa: C901
     # TODO: use external data file and file locking in order to share directories across processes
     created_directory_stacks = defaultdict(dict)
 
@@ -517,10 +485,6 @@ def _check_ssh_key(user, ssh_generation_enabled, remote_command_executor, schedu
     "directory_type,directory_protocol,directory_certificate_verification",
     [
         ("SimpleAD", "ldap", False),
-        # ("SimpleAD", "ldaps", False),
-        # ("SimpleAD", "ldaps", True),
-        # ("MicrosoftAD", "ldap", False),
-        # ("MicrosoftAD", "ldaps", False),
         ("MicrosoftAD", "ldaps", True),
     ],
 )
@@ -535,10 +499,7 @@ def test_ad_integration(  # noqa: C901
     directory_certificate_verification,
     test_datadir,
     directory_factory,
-    fsx_factory,
-    svm_factory,
     request,
-    store_secret_in_secret_manager,
     clusters_factory,
 ):
     """
@@ -553,15 +514,6 @@ def test_ad_integration(  # noqa: C901
     if not is_directory_supported(region, directory_type):
         pytest.skip(f"Skipping the test because directory type {directory_type} is not supported in region {region}")
 
-    fsx_lustre_supported = is_fsx_lustre_supported(region)
-    fsx_ontap_supported = is_fsx_ontap_supported(region)
-    fsx_openzfs_supported = is_fsx_openzfs_supported(region)
-
-    config_params = {
-        "fsx_lustre_supported": fsx_lustre_supported,
-        "fsx_ontap_supported": fsx_ontap_supported,
-        "fsx_openzfs_supported": fsx_openzfs_supported,
-    }
     directory_stack_name = directory_factory(
         request.config.getoption("directory_stack_name"),
         directory_type,
@@ -571,30 +523,17 @@ def test_ad_integration(  # noqa: C901
     ad_user_password = get_user_password(directory_stack_outputs.get("UserPasswordSecretArn"))
 
     ldap_tls_ca_cert = "/opt/parallelcluster/shared/directory_service/certificate.crt"
-    config_params.update(
-        get_ad_config_param_vals(
-            directory_stack_outputs,
-            ldap_tls_ca_cert,
-            directory_type,
-            directory_protocol,
-            directory_certificate_verification,
-        )
+    config_params = get_ad_config_param_vals(
+        directory_stack_outputs,
+        ldap_tls_ca_cert,
+        directory_type,
+        directory_protocol,
+        directory_certificate_verification,
     )
 
     vpc = directory_stack_outputs.get("VpcId")
     config_params.update(get_vpc_public_subnet(vpc))
-    if fsx_ontap_supported:
-        config_params.update(
-            get_fsx_ontap_config_param_vals(
-                fsx_factory, svm_factory, vpc=vpc, subnet=get_vpc_public_subnet(vpc).get("public_subnet_id")
-            )
-        )
-    if fsx_openzfs_supported:
-        config_params.update(
-            get_fsx_open_zfs_config_param_vals(
-                fsx_factory, svm_factory, vpc=vpc, subnet=get_vpc_public_subnet(vpc).get("public_subnet_id")
-            )
-        )
+
     cluster_config = pcluster_config_reader(**config_params)
     cluster = clusters_factory(cluster_config)
 
@@ -603,8 +542,6 @@ def test_ad_integration(  # noqa: C901
     with open(test_datadir / "certificate.crt", "w") as f:
         f.write(certificate)
 
-    # Publish compute node count metric every minute via cron job
-    # TODO: use metrics reporter from the benchmarks module
     remote_command_executor = RemoteCommandExecutor(cluster)
     remote_command_executor.run_remote_command(
         f"sudo cp certificate.crt {ldap_tls_ca_cert} && sudo service sssd restart",
@@ -615,14 +552,6 @@ def test_ad_integration(  # noqa: C901
         time.sleep(600)
         # TODO: we have to sleep for 10 minutes to wait for the SSSD agent use the newly placed certificate.
         #  We should look for other methods to let the SSSD agent use the new certificate more quickly
-    remote_command_executor = RemoteCommandExecutor(cluster)
-    metric_publisher_script = "publish_compute_node_count_metric.sh"
-    remote_metric_publisher_script_path = f"/shared/{metric_publisher_script}"
-    crontab_expression = f"* * * * * {remote_metric_publisher_script_path} &> {remote_metric_publisher_script_path}.log"
-    remote_command_executor.run_remote_command(
-        f"echo '{crontab_expression}' | crontab -",
-        additional_files={str(test_datadir / metric_publisher_script): remote_metric_publisher_script_path},
-    )
 
     scheduler_commands = scheduler_commands_factory(remote_command_executor)
     assert_that(NUM_USERS_TO_TEST).is_less_than_or_equal_to(NUM_USERS_TO_CREATE)
@@ -639,13 +568,7 @@ def test_ad_integration(  # noqa: C901
                 scheduler_commands_factory,
             )
         )
-    shared_storage_mount_dirs = ["/shared", "/efs"]
-    if fsx_lustre_supported:
-        shared_storage_mount_dirs.extend(["/fsxlustre"])
-    if fsx_ontap_supported:
-        shared_storage_mount_dirs.extend(["/fsxontap"])
-    if fsx_openzfs_supported:
-        shared_storage_mount_dirs.extend(["/fsxopenzfs"])
+    shared_storage_mount_dirs = ["/shared"]
     _run_user_workloads(users, test_datadir, shared_storage_mount_dirs)
     logging.info("Testing pcluster update and generate ssh keys for user")
     _check_ssh_key_generation(users[0], remote_command_executor, scheduler_commands, False)

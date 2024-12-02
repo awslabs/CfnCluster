@@ -115,13 +115,13 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                 "queue1-i1": {
                     "instances": [
                         {
-                            "instance_type": "c5.xlarge",
+                            "instance_type": "c5.large",
                         },
                         {
-                            "instance_type": "c5n.xlarge",
+                            "instance_type": "c5n.large",
                         },
                         {
-                            "instance_type": "c5d.xlarge",
+                            "instance_type": "c5d.large",
                         },
                     ],
                     "expected_running_instances": 1,
@@ -133,7 +133,16 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                     "instances": [
                         {
                             "instance_type": "t3.small",
-                        }
+                        },
+                        {
+                            "instance_type": "t3a.small",
+                        },
+                        {
+                            "instance_type": "t3.medium",
+                        },
+                        {
+                            "instance_type": "t3a.medium",
+                        },
                     ],
                     "expected_running_instances": 1,
                     "expected_power_saved_instances": 9,
@@ -191,7 +200,8 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
     # On the other hand, the update workflow waits for existing nodes to complete their update recipes.
     # As a consequence, the stack may reach the UPDATE_COMPLETE state
     # without waiting for new static nodes to complete their bootstrap recipes.
-    retry(wait_fixed=seconds(10), stop_max_delay=minutes(3))(assert_instance_config_version_on_ddb)(
+    # We wait at most 6 minutes because we know that compute nodes may take 4/5 minutes to bootstrap.
+    retry(wait_fixed=seconds(10), stop_max_delay=minutes(6))(assert_instance_config_version_on_ddb)(
         cluster, last_cluster_config_version
     )
 
@@ -199,8 +209,8 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
 
     # Here is the expected list of nodes.
     # the cluster:
-    # queue1-st-c5xlarge-1
-    # queue1-st-c5xlarge-2
+    # queue1-st-c5large-1
+    # queue1-st-c5large-2
     retry(wait_fixed=seconds(20), stop_max_delay=minutes(5))(assert_initial_conditions)(
         slurm_commands, 2, 0, partition="queue1"
     )
@@ -210,13 +220,13 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                 "queue1-i1": {
                     "instances": [
                         {
-                            "instance_type": "c5.xlarge",
+                            "instance_type": "c5.large",
                         },
                         {
-                            "instance_type": "c5n.xlarge",
+                            "instance_type": "c5n.large",
                         },
                         {
-                            "instance_type": "c5d.xlarge",
+                            "instance_type": "c5d.large",
                         },
                     ],
                     "expected_running_instances": 2,
@@ -239,7 +249,16 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                     "instances": [
                         {
                             "instance_type": "t3.small",
-                        }
+                        },
+                        {
+                            "instance_type": "t3a.small",
+                        },
+                        {
+                            "instance_type": "t3.medium",
+                        },
+                        {
+                            "instance_type": "t3a.medium",
+                        },
                     ],
                     "expected_running_instances": 0,
                     "expected_power_saved_instances": 10,
@@ -591,7 +610,7 @@ def test_update_instance_list(
         submit_command_args={"command": "sleep 1000", "nodes": 1, "other_options": "--exclusive"}
     )
     # Check instance type is the expected for min count
-    _check_instance_type(ec2, instances, "c5d.xlarge")
+    _check_instance_type(ec2, instances, "c5d.large")
 
     # Update cluster with new configuration, adding new instance type with lower price
     updated_config_file = pcluster_config_reader(bucket_name=bucket_name, config_file="pcluster.config.update.yaml")
@@ -609,7 +628,7 @@ def test_update_instance_list(
     logging.info(new_instances)
     new_instances.remove(instances[0])
     # Check new instance type is the expected one, i.e. the one with lower price.
-    _check_instance_type(ec2, new_instances, "c5.xlarge")
+    _check_instance_type(ec2, new_instances, "c5.large")
 
     # Update cluster removing instance type from the list
     updated_config_file = pcluster_config_reader(
@@ -1042,7 +1061,10 @@ def external_shared_storage_stack(request, test_datadir, region, vpc_stack: CfnV
                 {"ParameterKey": "Vpc", "ParameterValue": vpc},
                 {"ParameterKey": "SubnetOne", "ParameterValue": one_subnet_per_az[0]},
                 {"ParameterKey": "SubnetTwo", "ParameterValue": one_subnet_per_az[1]},
-                {"ParameterKey": "SubnetThree", "ParameterValue": one_subnet_per_az[2 % len(azs)]},
+                {
+                    "ParameterKey": "SubnetThree",
+                    "ParameterValue": "" if len(one_subnet_per_az) == 2 else one_subnet_per_az[2],
+                },
                 # EBS
                 {"ParameterKey": "CreateEbs", "ParameterValue": "true"},
                 {"ParameterKey": "EbsVolumeAz", "ParameterValue": ebs_volume_az},

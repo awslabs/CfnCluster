@@ -43,26 +43,30 @@ def test_slurm_cli_commands(
     """Test pcluster cli commands are working."""
     # Use long scale down idle time so we know nodes are terminated by pcluster stop
     cluster_config = pcluster_config_reader(scaledown_idletime=60)
-    # Using custom AMI not tagged by pcluser will generate a warning
-    custom_ami = retrieve_latest_ami(region, os, ami_type="official", architecture="x86_64")
-    config_file = "pcluster.config.with.warnings.yaml"
-    cluster_config_with_warning = pcluster_config_reader(config_file=config_file, custom_ami=custom_ami)
 
-    # Test below is not compatible with `--cluster` flag. Therefore, skip it if the flag is provided.
-    if not request.config.getoption("cluster"):
-        _test_create_with_warnings(cluster_config_with_warning, clusters_factory)
+    if "alinux" not in os and "us-iso" in region:  # The code does not know non-amazon vanilla AMIs IDs in iso regions
+        # Using custom AMI not tagged by pcluser will generate a warning
+        custom_ami = retrieve_latest_ami(region, os, ami_type="official", architecture="x86_64")
+        config_file = "pcluster.config.with.warnings.yaml"
+        cluster_config_with_warning = pcluster_config_reader(config_file=config_file, custom_ami=custom_ami)
+
+        # Test below is not compatible with `--cluster` flag. Therefore, skip it if the flag is provided.
+        if not request.config.getoption("cluster"):
+            _test_create_with_warnings(cluster_config_with_warning, clusters_factory)
 
     cluster = _test_create_cluster(clusters_factory, cluster_config, request)
     _test_describe_cluster(cluster)
     _test_list_cluster(cluster.name, "CREATE_COMPLETE")
 
-    _test_update_with_warnings(cluster_config_with_warning, cluster)
+    if "alinux" not in os and "us-iso" in region:
+        _test_update_with_warnings(cluster_config_with_warning, cluster)
     check_status(cluster, "CREATE_COMPLETE", "running", "RUNNING")
 
     filters = [{}, {"node_type": "HeadNode"}, {"node_type": "Compute"}, {"queue_name": "ondemand1"}]
     for filter_ in filters:
         _test_describe_instances(cluster, **filter_)
     _test_pcluster_export_cluster_logs(s3_bucket_factory, cluster)
+    _test_pcluster_export_cluster_logs(s3_bucket_factory, cluster, True)
     check_pcluster_list_cluster_log_streams(cluster, os)
     _test_pcluster_get_cluster_log_events(cluster)
     _test_pcluster_get_cluster_stack_events(cluster)
@@ -297,44 +301,54 @@ def _test_export_log_files_are_expected(cluster, bucket_name, instance_ids, buck
                 assert_that(any(file_expected in filename for filename in filenames)).is_true()
 
 
-def _test_pcluster_export_cluster_logs(s3_bucket_factory, cluster):
+def _test_pcluster_export_cluster_logs(s3_bucket_factory, cluster, use_pcluster_bucket=False):
     """Test pcluster export-cluster-logs functionality."""
     instance_ids = cluster.get_cluster_instance_ids()
     headnode_instance_id = cluster.get_cluster_instance_ids(node_type="HeadNode")
 
     logging.info("Testing that pcluster export-cluster-logs is working as expected")
-    bucket_name = s3_bucket_factory()
-    logging.info("bucket is %s", bucket_name)
 
-    # set bucket permissions
-    bucket_policy = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": "s3:GetBucketAcl",
-                "Effect": "Allow",
-                "Resource": f"arn:{cluster.partition}:s3:::{bucket_name}",
-                "Principal": {"Service": f"logs.{cluster.region}.amazonaws.com"},
-            },
-            {
-                "Action": "s3:PutObject",
-                "Effect": "Allow",
-                "Resource": f"arn:{cluster.partition}:s3:::{bucket_name}/*",
-                "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
-                "Principal": {"Service": f"logs.{cluster.region}.amazonaws.com"},
-            },
-        ],
-    }
-    boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+    if not use_pcluster_bucket:
+        bucket_name = s3_bucket_factory()
+        logging.info("bucket is %s", bucket_name)
+
+        # set bucket permissions
+        bucket_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "s3:GetBucketAcl",
+                    "Effect": "Allow",
+                    "Resource": f"arn:{cluster.partition}:s3:::{bucket_name}",
+                    "Principal": {"Service": f"logs.{cluster.region}.amazonaws.com"},
+                },
+                {
+                    "Action": "s3:PutObject",
+                    "Effect": "Allow",
+                    "Resource": f"arn:{cluster.partition}:s3:::{bucket_name}/*",
+                    "Condition": {"StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}},
+                    "Principal": {"Service": f"logs.{cluster.region}.amazonaws.com"},
+                },
+            ],
+        }
+        boto3.client("s3").put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+    else:
+        bucket_name = cluster.cfn_parameters.get("ResourcesS3Bucket")
+        logging.info("Using pcluster bucket %s.", bucket_name)
+
     # test with a prefix and an output file
     bucket_prefix = "test_prefix"
     retry(wait_fixed=seconds(20), stop_max_delay=minutes(3))(_test_export_log_files_are_expected)(
-        cluster, bucket_name, instance_ids, bucket_prefix
+        cluster, bucket_name if not use_pcluster_bucket else None, instance_ids, bucket_prefix
     )
 
     # test export-cluster-logs with filter option
     retry(wait_fixed=seconds(20), stop_max_delay=minutes(3))(_test_export_log_files_are_expected)(
-        cluster, bucket_name, headnode_instance_id, bucket_prefix, filters="Name=node-type,Values=HeadNode"
+        cluster,
+        bucket_name if not use_pcluster_bucket else None,
+        headnode_instance_id,
+        bucket_prefix,
+        filters="Name=node-type,Values=HeadNode",
     )
 
     # check bucket_prefix folder has been removed from S3
@@ -347,7 +361,7 @@ def _test_pcluster_export_cluster_logs(s3_bucket_factory, cluster):
     assert_that(bucket_cleaned_up).is_true()
 
     # test without a prefix or output file
-    ret = cluster.export_logs(bucket=bucket_name)
+    ret = cluster.export_logs(bucket=bucket_name if not use_pcluster_bucket else None)
     assert_that(ret).contains_key("url")
     filename = ret["url"].split(".tar.gz")[0].split("/")[-1] + ".tar.gz"
     archive_found = True

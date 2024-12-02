@@ -283,6 +283,7 @@ def _test_multiple_jobs(cluster, remote_command_executor, test_datadir, region, 
 
 
 @pytest.mark.usefixtures("os", "instance", "scheduler")
+@pytest.mark.parametrize("shared_headnode_storage_type", ["Efs", "Ebs"])
 def test_scaling_special_cases(
     region,
     scheduler,
@@ -291,6 +292,7 @@ def test_scaling_special_cases(
     scaling_odcr_stack,
     scheduler_commands_factory,
     test_datadir,
+    shared_headnode_storage_type,
 ):
     """
     This test aims to verify the following:
@@ -327,6 +329,7 @@ def test_scaling_special_cases(
             target_capacity_reservation_arn=resource_group_arn,
             full_cluster_size=full_cluster_size,
             launch_api=launch_api,
+            shared_headnode_storage_type=shared_headnode_storage_type,
         )
         cluster = clusters_factory(cluster_config)
 
@@ -338,6 +341,7 @@ def test_scaling_special_cases(
             target_capacity_reservation_arn=resource_group_arn,
             full_cluster_size=full_cluster_size,
             launch_api=launch_api,
+            shared_headnode_storage_type=shared_headnode_storage_type,
         )
 
         # Scale up cluster
@@ -373,6 +377,7 @@ def test_scaling_special_cases(
             downscaled_cluster_size=downscaled_cluster_size,
             full_cluster_size=full_cluster_size,
             launch_api=launch_api,
+            shared_headnode_storage_type=shared_headnode_storage_type,
         )
         _assert_cluster_update_scaling(
             cluster,

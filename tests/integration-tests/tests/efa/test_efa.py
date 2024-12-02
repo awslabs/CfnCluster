@@ -170,6 +170,8 @@ def _test_shm_transfer_is_enabled(scheduler_commands, remote_command_executor, p
         result = scheduler_commands.submit_command("fi_info -p efa 2>&1 > /shared/fi_info.out")
     job_id = scheduler_commands.assert_job_submitted(result.stdout)
     scheduler_commands.wait_job_completed(job_id)
+    job_stdout = remote_command_executor.run_remote_command(f"cat slurm-{job_id}.out").stdout
+    logging.info(f"Job stdout is: {job_stdout}")
     scheduler_commands.assert_job_succeeded(job_id)
     result = remote_command_executor.run_remote_command("cat /shared/fi_info.out")
     assert_that(result.stdout).does_not_contain("SHM transfer will be disabled because of ptrace protection")

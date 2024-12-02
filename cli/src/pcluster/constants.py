@@ -26,6 +26,8 @@ SCHEDULERS_SUPPORTING_IMDS_SECURED = ["slurm"]
 SUPPORTED_OSES = ["alinux2", "alinux2023", "ubuntu2004", "ubuntu2204", "rhel8", "rocky8", "rhel9", "rocky9"]
 SUPPORTED_OSES_FOR_SCHEDULER = {"slurm": SUPPORTED_OSES, "awsbatch": ["alinux2", "alinux2023"]}
 UNSUPPORTED_OSES_FOR_MICRO_NANO = ["ubuntu2004", "ubuntu2204", "rhel8", "rocky8", "rhel9", "rocky9"]
+UNSUPPORTED_OSES_FOR_DCV = ["alinux2023"]
+UNSUPPORTED_ARM_OSES_FOR_DCV = ["ubuntu2004"]
 DELETE_POLICY = "Delete"
 RETAIN_POLICY = "Retain"
 DELETION_POLICIES = [DELETE_POLICY, RETAIN_POLICY]
@@ -229,7 +231,7 @@ class Feature(Enum):
     """
 
     BATCH = "AWS Batch scheduler"
-    DCV = "NICE DCV"
+    DCV = "Amazon DCV"
     FSX_LUSTRE = "FSx Lustre"
     FILE_CACHE = "FileCache"
     FSX_ONTAP = "FSx ONTAP"
@@ -301,3 +303,7 @@ MAX_TAGS_COUNT = 40  # Tags are limited to 50, reserve some tags for parallelclu
 IAM_ROLE_REGEX = "^arn:.*:role/"
 IAM_INSTANCE_PROFILE_REGEX = "^arn:.*:instance-profile/"
 IAM_POLICY_REGEX = "^arn:.*:policy/"
+
+PCLUSTER_BUCKET_PROTECTED_FOLDER = "parallelcluster"
+PCLUSTER_BUCKET_PROTECTED_PREFIX = f"{PCLUSTER_BUCKET_PROTECTED_FOLDER}/"
+PCLUSTER_BUCKET_REQUIRED_BOOTSTRAP_FEATURES = ["basic", "export-logs"]

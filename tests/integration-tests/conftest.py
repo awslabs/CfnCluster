@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import time
 from functools import partial
 from itertools import product
 from shutil import copyfile
@@ -478,6 +479,7 @@ def api_server_factory(
                 )
                 cfn_stacks_factory.create_stack(stack)
                 api_servers[server_region] = stack
+                time.sleep(15)
             else:
                 logging.info(f"Found cached API Server stack: {api_stack_name} in {server_region}")
 
@@ -600,6 +602,7 @@ def pcluster_config_reader(test_datadir, vpc_stack, request, region, architectur
             raise FileNotFoundError(f"Cluster config file not found in the expected dir {config_file_path}")
         output_file_path = test_datadir / output_file if output_file else config_file_path
         default_values = _get_default_template_values(vpc_stack, request)
+        kwargs = inject_internal_storage_settings(**kwargs)
         file_loader = FileSystemLoader(str(test_datadir))
         env = SandboxedEnvironment(loader=file_loader)
         rendered_template = env.get_template(config_file).render(**{**default_values, **kwargs})
@@ -611,6 +614,12 @@ def pcluster_config_reader(test_datadir, vpc_stack, request, region, architectur
         return output_file_path
 
     return _config_renderer
+
+
+def inject_internal_storage_settings(**kwargs):
+    if not kwargs.get("shared_headnode_storage_type"):
+        kwargs["shared_headnode_storage_type"] = "Efs"
+    return kwargs
 
 
 def inject_additional_image_configs_settings(image_config, request):
@@ -855,7 +864,6 @@ def _get_default_template_values(vpc_stack: CfnVpcStack, request):
 
     default_values["imds_secured"] = default_values.get("scheduler") in SCHEDULERS_SUPPORTING_IMDS_SECURED
     default_values["scheduler_prefix"] = {"slurm": "Slurm", "awsbatch": "AwsBatch"}.get(default_values.get("scheduler"))
-
     return default_values
 
 
@@ -1201,6 +1209,7 @@ def _odcr_azs(vpc_stack):
 def scaling_odcr_stack(
     request,
     region,
+    os,
     cfn_stacks_factory,
     vpc_stack: CfnVpcStack,
 ):
@@ -1221,12 +1230,13 @@ def scaling_odcr_stack(
         odcr_template.set_description("ODCR stack to test scaling with special cases")
         default_public_az, availability_zone_1, availability_zone_2 = _odcr_azs(vpc_stack).values()
 
+        instance_platform = "Red Hat Enterprise Linux" if "rhel" in os else "Linux/UNIX"
         first_odcr_instances_count = int(instances_count // 2)
         scaling_odcr_a = ec2.CapacityReservation(
             "integTestsScalingOdcrA",
             AvailabilityZone=default_public_az,
             InstanceCount=first_odcr_instances_count,
-            InstancePlatform="Linux/UNIX",
+            InstancePlatform=instance_platform,
             InstanceType="c5.large",
             InstanceMatchCriteria="targeted",
         )
@@ -1234,7 +1244,7 @@ def scaling_odcr_stack(
             "integTestsScalingOdcrB",
             AvailabilityZone=default_public_az,
             InstanceCount=instances_count - first_odcr_instances_count,
-            InstancePlatform="Linux/UNIX",
+            InstancePlatform=instance_platform,
             InstanceType="c5.large",
             InstanceMatchCriteria="targeted",
         )
@@ -1294,6 +1304,7 @@ def scaling_odcr_stack(
 def odcr_stack(
     request,
     region,
+    os,
     placement_group_stack,
     cfn_stacks_factory,
     vpc_stack: CfnVpcStack,
@@ -1306,18 +1317,20 @@ def odcr_stack(
     odcr_template.set_description("ODCR stack to test open, targeted, and PG ODCRs")
     default_public_az, availability_zone_1, availability_zone_2 = _odcr_azs(vpc_stack).values()
 
+    instance_platform = "Red Hat Enterprise Linux" if "rhel" in os else "Linux/UNIX"
+
     open_odcr = ec2.CapacityReservation(
         "integTestsOpenOdcr",
         AvailabilityZone=default_public_az,
         InstanceCount=6,
-        InstancePlatform="Linux/UNIX",
+        InstancePlatform=instance_platform,
         InstanceType="m5.2xlarge",
     )
     target_odcr = ec2.CapacityReservation(
         "integTestsTargetOdcr",
         AvailabilityZone=default_public_az,
         InstanceCount=6,
-        InstancePlatform="Linux/UNIX",
+        InstancePlatform=instance_platform,
         InstanceType="r5.xlarge",
         InstanceMatchCriteria="targeted",
     )
@@ -1326,7 +1339,7 @@ def odcr_stack(
         "integTestsPgOdcr",
         AvailabilityZone=default_public_az,
         InstanceCount=3,
-        InstancePlatform="Linux/UNIX",
+        InstancePlatform=instance_platform,
         InstanceType="m5.xlarge",
         InstanceMatchCriteria="targeted",
         PlacementGroupArn=boto3.resource("ec2").PlacementGroup(pg_name).group_arn,
@@ -1375,7 +1388,7 @@ def odcr_stack(
         "az1Odcr",
         AvailabilityZone=availability_zone_1,
         InstanceCount=2,
-        InstancePlatform="Linux/UNIX",
+        InstancePlatform=instance_platform,
         InstanceMatchCriteria="targeted",
         InstanceType="c5.xlarge",
     )
@@ -1383,7 +1396,7 @@ def odcr_stack(
         "az2Odcr",
         AvailabilityZone=availability_zone_2,
         InstanceCount=2,
-        InstancePlatform="Linux/UNIX",
+        InstancePlatform=instance_platform,
         InstanceMatchCriteria="targeted",
         InstanceType="c5.xlarge",
     )
@@ -1767,10 +1780,10 @@ def open_zfs_volume_factory(vpc_stack, cfn_stacks_factory, request, region, key_
 
 
 @pytest.fixture(scope="class")
-def snapshots_factory():
+def snapshots_factory(region):
     factory = EBSSnapshotsFactory()
     yield factory
-    factory.release_all()
+    factory.release_all(region)
 
 
 @pytest.fixture(scope="class")
