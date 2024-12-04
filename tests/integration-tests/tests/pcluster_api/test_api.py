@@ -302,7 +302,7 @@ def _test_cluster_workflow(
     # Update cluster with new configuration
     with open(updated_config_file, encoding="utf-8") as config_file:
         updated_cluster_config = config_file.read()
-    _test_update_cluster_dryrun(region, cluster_operations_client, cluster_name, updated_cluster_config)
+    _test_update_cluster(region, cluster_operations_client, cluster_name, updated_cluster_config)
 
     head_node = _test_describe_cluster_head_node(region, cluster_instances_client, cluster_name)
     compute_node_map = _test_describe_cluster_compute_nodes(region, cluster_instances_client, cluster_name)
@@ -495,11 +495,9 @@ def _test_create_cluster(client, create_cluster, cluster_name, config):
     return cluster
 
 
-def _test_update_cluster_dryrun(region, client, cluster_name, config):
+def _test_update_cluster(region, client, cluster_name, config):
     body = UpdateClusterRequestContent(config)
-    error_message = "Request would have succeeded, but DryRun flag is set."
-    with pytest.raises(ApiException, match=error_message):
-        client.update_cluster(cluster_name, body, region=region, dryrun=True)
+    client.update_cluster(cluster_name, body, region=region, dryrun=False)
 
 
 def _test_delete_cluster(region, client, cluster_name):

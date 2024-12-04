@@ -461,9 +461,9 @@ def _analyze_changes(changes):
         message = _create_message(row[key_indexes["reason"]], row[key_indexes["action_needed"]])
         if not _cluster_update_change_succeded(check_result):
             errors.append(
-                UpdateError(parameter=parameter, requested_value=new_value, message=message, current_value=old_value)
+                UpdateError(parameter=parameter, requested_value=str(new_value), message=message, current_value=str(old_value))
             )
-        change_set.append(Change(parameter=parameter, requested_value=new_value, current_value=old_value))
+        change_set.append(Change(parameter=parameter, requested_value=str(new_value), current_value=str(old_value)))
     return change_set, errors
 
 
