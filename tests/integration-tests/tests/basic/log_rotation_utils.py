@@ -130,6 +130,10 @@ def _test_logs_are_rotated(os, logs, remote_command_executor, before_log_rotatio
         "sync",
         compute_node_ip,
     )
+    # remove date extension to old rotated file
+    _run_command_on_node(
+        remote_command_executor, "sudo sed -i 's/dateext/nodateext/g' /etc/logrotate.conf", compute_node_ip
+    )
     # force log rotate without waiting for logs to reach certain size
     _run_command_on_node(remote_command_executor, "sudo logrotate -f /etc/logrotate.conf", compute_node_ip)
     # check if logs are rotated
