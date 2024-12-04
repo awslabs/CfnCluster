@@ -23,7 +23,6 @@ from benchmarks.common.util import get_instance_vcpus
 from botocore.config import Config
 from cfn_stacks_factory import CfnStack
 from clusters_factory import Cluster, ClustersFactory
-from pcluster_client import ApiException
 from pcluster_client.api import (
     cluster_compute_fleet_api,
     cluster_instances_api,
