@@ -20,6 +20,7 @@ CHANGELOG
 - When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
 - Fix an issue where changes in sequence of custom actions scripts were not detected during cluster updates.
 - Add missing permissions for ParallelCluster API to create the service linked roles for Elastic Load Balancing and Auto Scaling, that are required to deploy login nodes.
+- Fix an issue where when using PCAPI, cluster update could fail when updating a parameter that is not type `String` (e.g. `MaxCount`).
 
 3.11.1
 ------
