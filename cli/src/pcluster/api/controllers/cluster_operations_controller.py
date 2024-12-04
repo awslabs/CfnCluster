@@ -455,17 +455,15 @@ def _analyze_changes(changes):
 
     for row in changes[1:]:
         parameter = ConfigPatch.build_config_param_path(row[key_indexes["param_path"]], row[key_indexes["parameter"]])
-        new_value = row[key_indexes["new value"]] if not row[key_indexes["new value"]] is None else "-"
-        old_value = row[key_indexes["old value"]] if not row[key_indexes["old value"]] is None else "-"
+        new_value = str(row[key_indexes["new value"]]) if not row[key_indexes["new value"]] is None else "-"
+        old_value = str(row[key_indexes["old value"]]) if not row[key_indexes["old value"]] is None else "-"
         check_result = row[key_indexes["check"]]
         message = _create_message(row[key_indexes["reason"]], row[key_indexes["action_needed"]])
         if not _cluster_update_change_succeded(check_result):
             errors.append(
-                UpdateError(
-                    parameter=parameter, requested_value=str(new_value), message=message, current_value=str(old_value)
-                )
+                UpdateError(parameter=parameter, requested_value=new_value, message=message, current_value=old_value)
             )
-        change_set.append(Change(parameter=parameter, requested_value=str(new_value), current_value=str(old_value)))
+        change_set.append(Change(parameter=parameter, requested_value=new_value, current_value=old_value))
     return change_set, errors
 
 
