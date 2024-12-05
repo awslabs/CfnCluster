@@ -23,6 +23,8 @@ Scheduling:
           {% else %}
           Instances:
             - InstanceType: {{ instance }}
+            - InstanceType: c6in.metal
+            - InstanceType: m6idn.32xlarge
           MinCount: 1
           Efa:
             Enabled: true
