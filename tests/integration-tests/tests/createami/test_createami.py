@@ -393,7 +393,7 @@ def _test_image_tag_and_volume(image):
         )
         .get("Images")
     )
-    logging.info(image_list)
+    logging.info(f"Image List: {image_list}, length {len(image_list)}")
     assert_that(len(image_list)).is_equal_to(1)
 
     created_image = image_list[0]
