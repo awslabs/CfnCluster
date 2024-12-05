@@ -18,8 +18,3 @@ echo "Use the following to run a local Flask development server hosting the API"
 echo "  docker run -p 8080:8080 --entrypoint python pcluster-lambda -m pcluster.api.flask_app"
 echo "Then you can navigate to the following url to test the API: http://0.0.0.0:8080/ui"
 echo "Note that to enable swagger-ui you have to build the docker with '--build-arg PROFILE=dev'"
-echo
-echo "Use the following command to push the built image to a public ECR repository"
-echo "  aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/<alias>/<repository-name>"
-echo "  docker tag pcluster-lambda:latest public.ecr.aws/<alias>/<repository-name>:latest"
-echo "  docker push public.ecr.aws/<alias>/<repository-name>:latest"
