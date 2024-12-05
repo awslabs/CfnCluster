@@ -111,3 +111,16 @@ Invoke a deployed ParallelCluster API:
 python client/example.py --region [REGION] --stack-name [PCAPI_STACK_NAME]
 ```
 
+### Testing with Docker
+You can test ParallelCluster API locally with Docker.
+To this aim you need to build the Docker image:
+```
+bash tests/docker-build.sh
+```
+
+then run ParallelCluster API as Flask application:
+```
+docker run -p 8080:8080 -v ~/.aws:/root/.aws:ro --entrypoint python pcluster-lambda -m pcluster.api.flask_app
+```
+
+Notice that, the application will use the AWS credentials of your local default profile, defined in `~/.aws/config`.
