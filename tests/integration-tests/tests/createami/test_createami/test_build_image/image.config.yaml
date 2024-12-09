@@ -19,12 +19,12 @@ Build:
     UpdateOsPackages:
         Enabled: true
 {% endif %}
-{% if os in ["ubuntu2204", "rhel9", "rocky9"] %}
-# Disable Lustre installation because these newer operating systems release new kernels more often. Lustre usually does not support the latest kernels
     Installation:
         LustreClient:
-            Enabled: false
-{% endif %}
+            # Disable Lustre installation because these newer operating systems release new kernels more often. Lustre usually does not support the latest kernels
+            Enabled: {% if os in ["ubuntu2204", "rhel9", "rocky9"] %} false {% else %} true {% endif %}
+        NvidiaSoftware:
+            Enabled: {% if gpu_count > 0 %} true {% else %} false {% endif %}
 
 CustomS3Bucket: {{ bucket_name }}
 
