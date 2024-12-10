@@ -9,6 +9,7 @@ CHANGELOG
 - Extend Amazon DCV support to Ubuntu2204 on ARM instances.
 
 **CHANGES**
+- Upgrade NVIDIA driver to version 550.127.08 (from 550.90.07). This addresses [a known issue from Nivdia](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-550-90-07/index.html#known-issues).
 - Upgrade Amazon DCV to version `2024.0-18131`.
   - server: `2024.0-18131-1`
   - xdcv: `2024.0.631-1`
@@ -21,18 +22,17 @@ CHANGELOG
   - Libfabric-aws: `libfabric-aws-1.22.0-1`
   - Rdma-core: `rdma-core-54.0-1`
   - Open MPI: `openmpi40-aws-4.1.7-1` and `openmpi50-aws-5.0.5`
+- Auto-restart slurmctld on failure.
 - Upgrade mysql-community-client to version 8.0.39.
 - Remove support for Python 3.7 and 3.8, which are in end of life.
-- Upgrade NVIDIA driver to version 550.127.08 (from 550.90.07). This addresses a known issue from Nivdia.
-- Auto-restart slurmctld on failure.
 
 **BUG FIXES**
-- When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
 - Fix an issue where changes in sequence of custom actions scripts were not detected during cluster updates.
 - Add missing permissions for ParallelCluster API to create the service linked roles for Elastic Load Balancing and Auto Scaling, that are required to deploy login nodes.
-- Fix an issue where when using PCAPI, cluster update could fail when updating a parameter that is not type `String` (e.g. `MaxCount`).
 - Fix an issue in the way we get region when manage volumes so that it can correctly handle local zone.
 - Fix an issue where adding EFS filesystems with AccessPointIds during an update would fail.
+- Fix an issue where when using PCAPI, cluster update could fail when updating a parameter that is not type `String` (e.g. `MaxCount`).
+- When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
 
 3.11.1
 ------
