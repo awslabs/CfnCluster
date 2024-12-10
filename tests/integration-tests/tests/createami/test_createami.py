@@ -124,10 +124,12 @@ def test_build_image(
     bucket_name = s3_bucket_factory()
     _set_s3_bucket_policy(bucket_name, get_arn_partition(region), region)
 
+    enable_nvidia = True
     # Get base AMI
     if os in ["alinux2", "ubuntu2004"]:
         # Test Deep Learning AMIs
         base_ami = retrieve_latest_ami(region, os, ami_type="remarkable", architecture=architecture)
+        enable_nvidia = False  # Deep learning AMIs have Nvidia pre-installed
     elif "rhel" in os or "rocky" in os or "ubuntu" in os:
         # Test AMIs from first stage build. Because RHEL/Rocky and Ubuntu have specific requirement of kernel versions.
         try:
@@ -144,7 +146,7 @@ def test_build_image(
         parent_image=base_ami,
         instance_role=instance_role,
         bucket_name=bucket_name,
-        gpu_count=get_gpu_count(instance),
+        enable_nvidia=str(enable_nvidia and get_gpu_count(instance) > 0).lower(),
     )
 
     image = images_factory(image_id, image_config, region)
