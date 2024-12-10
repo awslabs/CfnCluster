@@ -29,7 +29,7 @@ CHANGELOG
 **BUG FIXES**
 - Fix an issue where changes in sequence of custom actions scripts were not detected during cluster updates.
 - Add missing permissions for ParallelCluster API to create the service linked roles for Elastic Load Balancing and Auto Scaling, that are required to deploy login nodes.
-- Fix an issue in the way we get region when manage volumes so that it can correctly handle local zone.
+- Fix retrieval of regions when managing volumes to correctly handle local zones.
 - Fix an issue where adding EFS filesystems with AccessPointIds during an update would fail.
 - Fix an issue where when using PCAPI, cluster update could fail when updating a parameter that is not type `String` (e.g. `MaxCount`).
 - When mounting an external OpenZFS, it is no longer required to set the outbound rules for ports 111, 2049, 20001, 20002, 20003.
