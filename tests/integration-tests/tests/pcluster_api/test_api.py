@@ -302,6 +302,7 @@ def _test_cluster_workflow(
     with open(updated_config_file, encoding="utf-8") as config_file:
         updated_cluster_config = config_file.read()
     _test_update_cluster(region, cluster_operations_client, cluster_name, updated_cluster_config)
+    cluster.wait_cluster_status("UPDATE_COMPLETE")
 
     head_node = _test_describe_cluster_head_node(region, cluster_instances_client, cluster_name)
     compute_node_map = _test_describe_cluster_compute_nodes(region, cluster_instances_client, cluster_name)
