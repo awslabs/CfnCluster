@@ -9,7 +9,7 @@ CHANGELOG
 - Extend Amazon DCV support to Ubuntu2204 on ARM instances.
 
 **CHANGES**
-- Upgrade NVIDIA driver to version 550.127.08 (from 550.90.07). This addresses a known issue from Nivdia.
+- Upgrade NVIDIA driver to version 550.127.08 (from 550.90.07). This addresses [a known issue from Nivdia](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-550-90-07/index.html#known-issues).
 - Upgrade Amazon DCV to version `2024.0-18131`.
   - server: `2024.0-18131-1`
   - xdcv: `2024.0.631-1`
