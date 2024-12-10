@@ -27,7 +27,7 @@ from remote_command_executor import RemoteCommandExecutor
 from retrying import retry
 from time_utils import minutes, seconds
 from troposphere import Template, iam
-from utils import generate_stack_name, get_arn_partition
+from utils import generate_stack_name, get_arn_partition, get_gpu_count
 
 from tests.common.assertions import (
     assert_head_node_is_running,
@@ -94,10 +94,11 @@ def test_invalid_config(
     assert_that(suppressed.message).contains("Request would have succeeded")
 
 
-@pytest.mark.usefixtures("instance", "scheduler")
+@pytest.mark.usefixtures("scheduler")
 def test_build_image(
     region,
     os,
+    instance,
     pcluster_config_reader,
     architecture,
     s3_bucket_factory,
@@ -138,9 +139,12 @@ def test_build_image(
     else:
         # Test vanilla AMIs.
         base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
-
     image_config = pcluster_config_reader(
-        config_file="image.config.yaml", parent_image=base_ami, instance_role=instance_role, bucket_name=bucket_name
+        config_file="image.config.yaml",
+        parent_image=base_ami,
+        instance_role=instance_role,
+        bucket_name=bucket_name,
+        gpu_count=get_gpu_count(instance),
     )
 
     image = images_factory(image_id, image_config, region)
