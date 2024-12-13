@@ -15,6 +15,7 @@ import logging
 import re
 import tarfile
 import tempfile
+import time
 
 import boto3
 import botocore
@@ -272,8 +273,11 @@ def _test_pcluster_compute_fleet(cluster, expected_num_nodes):
     logging.info("Testing pcluster start functionalities")
     # Do a complicated sequence of start and stop and see if commands will still work
     cluster.start()
+    time.sleep(15)
     cluster.stop()
+    time.sleep(15)
     cluster.stop()
+    time.sleep(30)
     cluster.start()
     compute_fleet = cluster.describe_compute_fleet()
     last_start_time = compute_fleet["lastStatusUpdatedTime"]

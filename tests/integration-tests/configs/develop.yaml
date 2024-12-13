@@ -332,7 +332,7 @@ test-suites:
   multiple_nics:
     test_multiple_nics.py::test_multiple_nics:
       dimensions:
-        - regions: ["use1-az6"]
+        - regions: ["use1-az1"]
           instances: ["c6in.32xlarge"]
           oss: {{ common.OSS_COMMERCIAL_X86 }}
           schedulers: ["slurm"]
@@ -828,5 +828,5 @@ test-suites:
       dimensions:
         - regions: ["eu-west-1"]
           instances: {{ common.INSTANCES_DEFAULT_X86 }}
-          oss: ["ubuntu2204"]
+          oss: [{{ OS_X86_0 }}]
           schedulers: ["slurm"]
