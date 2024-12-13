@@ -1311,6 +1311,42 @@ class HeadNodeImdsValidator(Validator):
             )
 
 
+class HeadNodeMemorySizeValidator(Validator):
+    """
+    Head Node Memory Size Validator.
+
+    Verify if the Head Node has enough memory to manage compute nodes.
+    """
+
+    def _validate(self, head_node_instance_type: str, total_max_compute_nodes: int):
+        head_node_memory = (
+            AWSApi.instance().ec2.get_instance_type_info(head_node_instance_type).ec2memory_size_in_mib() / 1024
+        )
+        # Assume OS takes up 0.6GB memory. Only check upto 16GB memory to prevent usage of small instance types.
+        required_memory = min(total_max_compute_nodes / 25 + 0.6, 16)
+        if head_node_memory < required_memory:
+            self._add_failure(
+                f"Head node instance type {head_node_instance_type} has {head_node_memory} GB of memory. "
+                f"Please choose a head node instance type with at least {required_memory} GB of memory"
+                f" to manage {total_max_compute_nodes} compute nodes.",
+                FailureLevel.ERROR,
+            )
+
+
+class SharedEbsPerformanceBottleNeckValidator(Validator):
+    """Warn potential performance bottleneck of using Shared EBS."""
+
+    def _validate(self, total_max_compute_nodes: int):
+        if total_max_compute_nodes > 100:
+            self._add_failure(
+                "EBS shared storage is mounted on the head node and shared to the compute nodes. "
+                "Therefore, the head node network bandwidth is a network performance bottle neck "
+                "if the compute nodes rely on this shared storage. "
+                "Please use FSx and EFS for better performance.",
+                FailureLevel.WARNING,
+            )
+
+
 class ComputeResourceLaunchTemplateValidator(_LaunchTemplateValidator):
     """Try to launch the requested instances (in dry-run mode) to verify configuration parameters."""
 
