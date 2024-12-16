@@ -194,7 +194,7 @@ phases:
               VERSION='{{ build.OperatingSystemVersion.outputs.stdout }}'
 
               if [[ ${!PLATFORM} == RHEL ]]; then
-                if [[ ${!OS} == rhel9 ]]; then
+                if [[ ${!OS} == rhel9 ]] || [[ ${!OS} == rocky9 ]]; then
                   echo ${!VERSION} > /etc/yum/vars/releasever
                   yum clean all
                 fi

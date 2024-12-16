@@ -167,7 +167,7 @@ phases:
               OS='{{ build.OperatingSystemName.outputs.stdout }}'
               PLATFORM='{{ build.PlatformName.outputs.stdout }}'
               VERSION='{{ build.OperatingSystemVersion.outputs.stdout }}'
-              if [[ ${!OS} == rhel9 ]]; then
+              if [[ ${!OS} == rhel9 ]] || [[ ${!OS} == rocky9 ]]; then
                   echo ${!VERSION} > /etc/yum/vars/releasever
                   yum clean all
                 fi
