@@ -195,8 +195,11 @@ phases:
 
               if [[ ${!PLATFORM} == RHEL ]]; then
                 if [[ ${!OS} == rhel9 ]] || [[ ${!OS} == rocky9 ]]; then
-                  echo ${!VERSION} > /etc/yum/vars/releasever
-                  yum clean all
+                  if [[ ! -f /etc/yum/vars/releasever ]]; then
+                    echo "yes" > /opt/parallelcluster/pin_releasesever
+                    echo ${!VERSION} > /etc/yum/vars/releasever
+                    yum clean all
+                  fi
                 fi
                 yum -y update krb5-libs
                 yum -y groupinstall development && sudo yum -y install curl wget jq
