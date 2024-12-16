@@ -168,9 +168,12 @@ phases:
               PLATFORM='{{ build.PlatformName.outputs.stdout }}'
               VERSION='{{ build.OperatingSystemVersion.outputs.stdout }}'
               if [[ ${!OS} == rhel9 ]] || [[ ${!OS} == rocky9 ]]; then
+                if [[ ! -f /etc/yum/vars/releasever ]]; then
+                  echo "yes" > /opt/parallelcluster/pin_releasesever
                   echo ${!VERSION} > /etc/yum/vars/releasever
                   yum clean all
                 fi
+              fi
 
               if [[ ${!PLATFORM} == RHEL ]]; then
                 yum -y install jq
