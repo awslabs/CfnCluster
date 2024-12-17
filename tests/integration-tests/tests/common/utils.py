@@ -52,8 +52,8 @@ OS_TO_OFFICIAL_AMI_NAME_OWNER_MAP = {
     "rocky8": {"name": "Rocky-8-EC2-Base-8.8*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
     "rhel8.9": {"name": "RHEL-8.9*_HVM-*", "owners": RHEL_OWNERS},
     "rocky8.9": {"name": "Rocky-8-EC2-Base-8.9*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
-    "rhel9": {"name": "RHEL-9.3*_HVM-*", "owners": RHEL_OWNERS},
-    "rocky9": {"name": "Rocky-9-EC2-Base-9.3*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
+    "rhel9": {"name": "RHEL-9.*_HVM*", "owners": RHEL_OWNERS},
+    "rocky9": {"name": "Rocky-9-EC2-Base-9.*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
 }
 
 # Remarkable AMIs are latest deep learning base AMI and FPGA developer AMI without pcluster infrastructure
@@ -67,8 +67,8 @@ OS_TO_REMARKABLE_AMI_NAME_OWNER_MAP = {
     "rocky8": {"name": "Rocky-8-EC2-Base-8.8*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
     "rhel8.9": {"name": "RHEL-8.9*_HVM-*", "owners": RHEL_OWNERS},
     "rocky8.9": {"name": "Rocky-8-EC2-Base-8.9*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
-    "rhel9": {"name": "RHEL-9.3*_HVM-*", "owners": RHEL_OWNERS},
-    "rocky9": {"name": "Rocky-9-EC2-Base-9.3*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
+    "rhel9": {"name": "RHEL-9.*_HVM*", "owners": RHEL_OWNERS},
+    "rocky9": {"name": "Rocky-9-EC2-Base-9.*", "owners": ["792107900819"]},  # TODO add china and govcloud accounts
 }
 
 OS_TO_KERNEL4_AMI_NAME_OWNER_MAP = {
