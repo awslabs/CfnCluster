@@ -125,6 +125,7 @@ def test_build_image(
     _set_s3_bucket_policy(bucket_name, get_arn_partition(region), region)
 
     enable_nvidia = True
+    update_os_packages = False
     # Get base AMI
     if os in ["alinux2", "ubuntu2004"]:
         # Test Deep Learning AMIs
@@ -138,15 +139,19 @@ def test_build_image(
             # Therefore, the test tries to succeed at best effort.
             logging.info("First stage AMI not available, using official AMI instead.")
             base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
+            update_os_packages = True
     else:
         # Test vanilla AMIs.
         base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
+    if os in ["alinux2", "alinux2023"]:
+        update_os_packages = True
     image_config = pcluster_config_reader(
         config_file="image.config.yaml",
         parent_image=base_ami,
         instance_role=instance_role,
         bucket_name=bucket_name,
         enable_nvidia=str(enable_nvidia and get_gpu_count(instance) > 0).lower(),
+        update_os_packages=str(update_os_packages).lower(),
     )
 
     image = images_factory(image_id, image_config, region)
