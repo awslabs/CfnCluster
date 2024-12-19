@@ -19,7 +19,7 @@ Build:
     Installation:
         LustreClient:
             # Disable Lustre installation because these newer operating systems release new kernels more often. Lustre usually does not support the latest kernels
-            Enabled: {% if os in ["ubuntu2204", "rhel9", "rocky9"] %} false {% else %} true {% endif %}
+            Enabled: {{ enable_lustre_client }}
         NvidiaSoftware:
             Enabled: {{ enable_nvidia }}
 

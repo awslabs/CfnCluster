@@ -126,6 +126,7 @@ def test_build_image(
 
     enable_nvidia = True
     update_os_packages = False
+    enable_lustre_client = True
     # Get base AMI
     if os in ["alinux2", "ubuntu2004"]:
         # Test Deep Learning AMIs
@@ -140,6 +141,8 @@ def test_build_image(
             logging.info("First stage AMI not available, using official AMI instead.")
             base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
             update_os_packages = True
+            if os in ["ubuntu2204", "rhel9", "rocky9"]:
+                enable_lustre_client = False
     else:
         # Test vanilla AMIs.
         base_ami = retrieve_latest_ami(region, os, ami_type="official", architecture=architecture)
@@ -152,6 +155,7 @@ def test_build_image(
         bucket_name=bucket_name,
         enable_nvidia=str(enable_nvidia and get_gpu_count(instance) > 0).lower(),
         update_os_packages=str(update_os_packages).lower(),
+        enable_lustre_client=str(enable_lustre_client).lower(),
     )
 
     image = images_factory(image_id, image_config, region)
