@@ -16,6 +16,7 @@ from assertpy import assert_that
 
 from pcluster.aws.common import AWSClientError
 from pcluster.models.cluster import ClusterActionError, ClusterStack
+from pcluster.models.s3_bucket import S3FileType
 from tests.pcluster.aws.dummy_aws_api import mock_aws_api
 from tests.pcluster.config.dummy_cluster_config import dummy_awsbatch_cluster_config, dummy_slurm_cluster_config
 from tests.pcluster.models.dummy_s3_bucket import mock_bucket, mock_bucket_object_utils, mock_bucket_utils
@@ -136,6 +137,7 @@ def test_setup_bucket_with_resources_success(
     upload_config_mock = mock_dict.get("upload_config")
     upload_template_mock = mock_dict.get("upload_cfn_template")
     upload_asset_mock = mock_dict.get("upload_cfn_asset")
+    upload_dna_asset_mock = mock_dict.get("upload_dna_cfn_asset")
     upload_custom_resources_mock = mock_dict.get("upload_resources")
     # mock bucket utils
     check_bucket_mock = mock_bucket_utils(mocker, root_service_dir=f"{cluster_name}-abc123")["check_bucket_exists"]
@@ -151,6 +153,7 @@ def test_setup_bucket_with_resources_success(
     cluster.bucket.upload_config(expected_config, "fake_config_name")
     cluster.bucket.upload_cfn_template(expected_template, "fake_template_name")
     cluster.bucket.upload_cfn_asset(expected_asset, "fake_asset_name")
+    cluster.bucket.upload_dna_cfn_asset(expected_asset, "fake_asset_name", S3FileType.COMPUTE_DNA_ASSETS)
     for dir in expected_dirs:
         cluster.bucket.upload_resources(dir)
 
@@ -160,6 +163,7 @@ def test_setup_bucket_with_resources_success(
     upload_config_mock.assert_called_with(expected_config, "fake_config_name")
     upload_template_mock.assert_called_with(expected_template, "fake_template_name")
     upload_asset_mock.assert_called_with(expected_asset, "fake_asset_name")
+    upload_dna_asset_mock.assert_called_with(expected_asset, "fake_asset_name", S3FileType.COMPUTE_DNA_ASSETS)
     upload_custom_resources_mock.assert_has_calls([mocker.call(dir) for dir in expected_dirs])
 
     # assert bucket properties
