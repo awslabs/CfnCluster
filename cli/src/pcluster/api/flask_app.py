@@ -9,10 +9,13 @@ import functools
 import logging
 
 import connexion
-from connexion import ProblemException
-from connexion.decorators.validation import ParameterValidator
+from connexion import ProblemException, http_facts
+from connexion.options import SwaggerUIOptions
+from connexion.validators.parameter import ParameterValidator
 from flask import Response, jsonify, request
+from connexion.problem import problem
 from werkzeug.exceptions import HTTPException
+from connexion.lifecycle import ConnexionRequest, ConnexionResponse
 
 from pcluster.api import encoder
 from pcluster.api.errors import (
@@ -72,16 +75,16 @@ class ParallelClusterFlaskApp:
 
     def __init__(self, swagger_ui: bool = False, validate_responses=False):
         assert_valid_node_js()
-        options = {"swagger_ui": swagger_ui}
 
-        self.app = connexion.FlaskApp(__name__, specification_dir="openapi/", skip_error_handlers=True)
+        #TODO find a replacement for FlaskApp(skip_error_handlers=True)
+        self.app = connexion.App(__name__, specification_dir="openapi/", jsonifier=encoder.JSONEncoder())
         self.flask_app = self.app.app
-        self.flask_app.json_encoder = encoder.JSONEncoder
+        # self.flask_app.json_encoder = encoder.JSONEncoder
         self.app.add_api(
             "openapi.yaml",
             arguments={"title": "ParallelCluster"},
             pythonic_params=True,
-            options=options,
+            swagger_ui_options=SwaggerUIOptions(swagger_ui=swagger_ui),
             validate_responses=validate_responses,
             validator_map={"parameter": CustomParameterValidator},
         )
@@ -129,47 +132,55 @@ class ParallelClusterFlaskApp:
 
     @staticmethod
     @log_response_error
-    def _handle_http_exception(exception: HTTPException):
+    def _handle_http_exception(request: ConnexionRequest, exception: HTTPException) -> ConnexionResponse:
         """Render a HTTPException according to ParallelCluster API specs."""
-        response = jsonify(exception_message(exception))
-        response.status_code = exception.code
-        return response
+        return problem(
+            title=http_facts.HTTP_STATUS_CODES.get(exception.code),
+            detail=exception_message(exception),
+            status=exception.code,
+        )
 
     @staticmethod
     @log_response_error
-    def _handle_problem_exception(exception: ProblemException):
+    def _handle_problem_exception(request: ConnexionRequest, exception: ProblemException) -> ConnexionResponse:
         """Render a ProblemException according to ParallelCluster API specs."""
-        response = jsonify(exception_message(exception))
-        response.status_code = exception.status
-        return response
+        return problem(
+            title=http_facts.HTTP_STATUS_CODES.get(exception.status),
+            detail=exception_message(exception),
+            status=exception.status,
+        )
 
     @staticmethod
     @log_response_error
-    def _handle_parallel_cluster_api_exception(exception: ParallelClusterApiException):
+    def _handle_parallel_cluster_api_exception(request: ConnexionRequest, exception: ParallelClusterApiException) -> ConnexionResponse:
         """Render a ParallelClusterApiException according to ParallelCluster API specs."""
-        response = jsonify(exception_message(exception))
-        response.status_code = exception.code
-        return response
+        return problem(
+            title=http_facts.HTTP_STATUS_CODES.get(exception.code),
+            detail=exception_message(exception),
+            status=exception.code,
+        )
 
     @staticmethod
-    def _handle_unexpected_exception(exception: Exception):
+    def _handle_unexpected_exception(request: ConnexionRequest, exception: Exception) -> ConnexionResponse:
         """Handle an unexpected exception."""
         LOGGER.critical("Unexpected exception: %s", exception, exc_info=True)
-        response = jsonify(exception_message(exception))
-        response.status_code = 500
-        return response
+        return problem(
+            title=http_facts.HTTP_STATUS_CODES.get(500),
+            detail=exception_message(exception),
+            status=500,
+        )
 
     @staticmethod
-    def _handle_aws_client_error(exception: AWSClientError):
+    def _handle_aws_client_error(request: ConnexionRequest, exception: AWSClientError) -> ConnexionResponse:
         """Transform a AWSClientError into a valid API error."""
         if exception.error_code == AWSClientError.ErrorCode.VALIDATION_ERROR.value:
-            return ParallelClusterFlaskApp._handle_parallel_cluster_api_exception(BadRequestException(str(exception)))
+            return ParallelClusterFlaskApp._handle_parallel_cluster_api_exception(request, BadRequestException(str(exception)))
         if exception.error_code in AWSClientError.ErrorCode.throttling_error_codes():
             return ParallelClusterFlaskApp._handle_parallel_cluster_api_exception(
-                LimitExceededException(str(exception))
+                request, LimitExceededException(str(exception))
             )
         return ParallelClusterFlaskApp._handle_parallel_cluster_api_exception(
-            InternalServiceException(f"Failed when calling AWS service in {exception.function_name}: {exception}")
+            request, InternalServiceException(f"Failed when calling AWS service in {exception.function_name}: {exception}")
         )
 
     def start_local_server(self, port: int = 8080, debug: bool = False):

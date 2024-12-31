@@ -2,6 +2,18 @@ CHANGELOG
 =========
 3.12.0
 ------
+**ENHANCEMENTS**
+
+**CHANGES**
+- Upgrade Werkzeug to version 3.1.3.
+- Upgrade Connexion to version 3.1.x.
+- Upgrade Flask to version 3.1.0.
+
+**BUG FIXES**
+
+
+3.12.0
+------
 
 **ENHANCEMENTS**
 - Add new build image configuration section `Build/Installation` to turn on/off Nvidia software and Lustre client installations. By default, Nvidia software, although included in official ParallelCluster AMIs, is not installed by `build-image`. By default, Lustre client is installed.

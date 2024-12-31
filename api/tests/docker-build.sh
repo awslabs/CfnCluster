@@ -2,8 +2,8 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-ROOT_DIR="${SCRIPT_DIR}/../../.."
-docker build "$@" -f "${ROOT_DIR}/api/docker/awslambda/Dockerfile" "${ROOT_DIR}/cli" -t pcluster-lambda
+ROOT_DIR="${SCRIPT_DIR}/../.."
+docker build "$@" -f "${ROOT_DIR}/api/tests/Dockerfile" "${ROOT_DIR}/cli" --no-cache -t pcluster-lambda
 
 echo
 echo "Use the following to run a shell in the container"
