@@ -1,5 +1,15 @@
 CHANGELOG
 =========
+3.13.0
+------
+**ENHANCEMENTS**
+
+**CHANGES**
+
+**BUG FIXES**
+- Fix an issue where when using Proxy, compute node bootstrap would fail.
+
+
 3.12.0
 ------
 
