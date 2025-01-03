@@ -21,6 +21,6 @@ RUN export PKG=(./dist/*.whl); python -m pip install "${PKG}[awslambda]" && rm -
 ARG PROFILE=prod
 ENV PROFILE=${PROFILE}
 # Install additional dependencies to start the SwaggerUI in dev mode
-RUN if [ "${PROFILE}" = "dev" ]; then python -m pip install connexion[swagger-ui]; fi
+RUN if [ "${PROFILE}" = "dev" ]; then python -m pip install connexion[flask,swagger-ui,uvicorn]; fi
 
 CMD ["pcluster.api.awslambda.entrypoint.lambda_handler"]

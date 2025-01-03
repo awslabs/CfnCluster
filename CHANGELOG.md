@@ -1,5 +1,17 @@
 CHANGELOG
 =========
+3.13.0
+------
+**ENHANCEMENTS**
+
+**CHANGES**
+- Upgrade Werkzeug to version 3.1.3.
+- Upgrade Connexion to version 3.1.x.
+- Upgrade Flask to version 3.1.0.
+
+**BUG FIXES**
+
+
 3.12.0
 ------
 
