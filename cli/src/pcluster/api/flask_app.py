@@ -77,7 +77,7 @@ class ParallelClusterFlaskApp:
         assert_valid_node_js()
 
         #TODO find a replacement for FlaskApp(skip_error_handlers=True)
-        self.app = connexion.App(__name__, specification_dir="openapi/", jsonifier=encoder.JSONEncoder())
+        self.app = connexion.App(__name__, specification_dir="openapi/")
         self.flask_app = self.app.app
         # self.flask_app.json_encoder = encoder.JSONEncoder
         self.app.add_api(
@@ -87,6 +87,7 @@ class ParallelClusterFlaskApp:
             swagger_ui_options=SwaggerUIOptions(swagger_ui=swagger_ui),
             validate_responses=validate_responses,
             validator_map={"parameter": CustomParameterValidator},
+            jsonifier=encoder.JSONEncoder.jsonifier(),
         )
         self.app.add_error_handler(HTTPException, self._handle_http_exception)
         self.app.add_error_handler(ProblemException, self._handle_problem_exception)
@@ -183,11 +184,11 @@ class ParallelClusterFlaskApp:
             request, InternalServiceException(f"Failed when calling AWS service in {exception.function_name}: {exception}")
         )
 
-    def start_local_server(self, port: int = 8080, debug: bool = False):
+    def start_local_server(self, port: int = 8080):
         """Start a local development Flask server."""
-        self.app.run(port=port, debug=debug)
+        self.app.run(port=port)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    ParallelClusterFlaskApp(swagger_ui=True, validate_responses=True).start_local_server(debug=True)
+    ParallelClusterFlaskApp(swagger_ui=True, validate_responses=True).start_local_server()

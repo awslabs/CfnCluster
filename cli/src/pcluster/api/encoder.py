@@ -13,12 +13,13 @@ import datetime
 import six
 from connexion import jsonifier
 from connexion.jsonifier import Jsonifier
+import json
 
 from pcluster.api.models.base_model_ import Model
 from pcluster.utils import to_iso_timestr
 
 
-class JSONEncoder(Jsonifier):
+class JSONEncoder(jsonifier.JSONEncoder):
     """Make the model objects JSON serializable."""
 
     include_nulls = False
@@ -37,3 +38,7 @@ class JSONEncoder(Jsonifier):
         elif isinstance(obj, datetime.date):
             return to_iso_timestr(obj)
         return jsonifier.JSONEncoder.default(self, obj)
+
+    @staticmethod
+    def jsonifier():
+        return Jsonifier(json_=json, cls=JSONEncoder)
