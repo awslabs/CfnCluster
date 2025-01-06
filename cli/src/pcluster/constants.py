@@ -244,7 +244,6 @@ class Feature(Enum):
 
 UNSUPPORTED_FEATURES_MAP = {
     Feature.BATCH: ["ap-northeast-3", "us-iso"],
-    Feature.DCV: ["us-iso"],
     Feature.FSX_LUSTRE: ["us-isob"],
     Feature.FILE_CACHE: ["us-iso"],
     Feature.FSX_ONTAP: ["us-iso"],
