@@ -50,10 +50,9 @@ Scheduling:
           MaxCount: 2
         - Name: queue1-i2
           Instances:
-            - InstanceType: t3.small
-            - InstanceType: t3a.small
-            - InstanceType: t3.medium
-            - InstanceType: t3a.medium
+          {% for instance_type in spot_instance_types %}
+            - InstanceType: {{ instance_type }}
+          {% endfor %}
           MinCount: 1
       Networking:
         SubnetIds:
