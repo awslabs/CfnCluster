@@ -18,7 +18,7 @@ MAX_QUEUE_SIZE = 5000
 
 @pytest.mark.parametrize(
     "max_nodes",
-    [1000],
+    [2000],
 )
 @pytest.mark.parametrize("shared_headnode_storage_type", ["Efs", "Ebs"])
 def test_scaling(
@@ -45,6 +45,7 @@ def test_scaling(
     scheduler_commands = scheduler_commands_factory(remote_command_executor)
 
     logging.info(f"Submitting an array of {max_nodes} jobs on {max_nodes} nodes")
+    before_time = datetime.datetime.now()
     job_id = scheduler_commands.submit_command_and_assert_job_accepted(
         submit_command_args={
             "command": "srun sleep 10",
@@ -56,6 +57,8 @@ def test_scaling(
 
     logging.info(f"Waiting for job to be running: {job_id}")
     scheduler_commands.wait_job_running(job_id)
+    after_time = datetime.datetime.now()
+    logging.info(f"Job starting time: {after_time - before_time}")
     logging.info(f"Job {job_id} is running")
 
     logging.info(f"Cancelling job: {job_id}")
