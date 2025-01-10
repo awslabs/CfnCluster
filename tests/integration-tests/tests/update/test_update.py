@@ -83,8 +83,15 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
     ]:
         bucket.upload_file(str(test_datadir / script), f"scripts/{script}")
 
+    spot_instance_types = ["t3.small", "t3.medium"]
+    try:
+        boto3.client("ec2").describe_instance_types(InstanceTypes=["t3a.small"])
+        spot_instance_types.extend(["t3a.small", "t3a.medium"])
+    except Exception:
+        pass
+
     # Create cluster with initial configuration
-    init_config_file = pcluster_config_reader(resource_bucket=bucket_name)
+    init_config_file = pcluster_config_reader(resource_bucket=bucket_name, spot_instance_types=spot_instance_types)
     cluster = clusters_factory(init_config_file)
 
     # Verify that compute nodes stored the deployed config version on DDB
@@ -132,17 +139,9 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                 "queue1-i2": {
                     "instances": [
                         {
-                            "instance_type": "t3.small",
-                        },
-                        {
-                            "instance_type": "t3a.small",
-                        },
-                        {
-                            "instance_type": "t3.medium",
-                        },
-                        {
-                            "instance_type": "t3a.medium",
-                        },
+                            "instance_type": instance_type,
+                        }
+                        for instance_type in spot_instance_types
                     ],
                     "expected_running_instances": 1,
                     "expected_power_saved_instances": 9,
@@ -190,6 +189,7 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
         resource_bucket=bucket_name,
         additional_policy_arn=additional_policy_arn,
         postupdate_script="updated_postupdate.sh",
+        spot_instance_types=spot_instance_types,
     )
     cluster.update(str(updated_config_file), force_update="true")
 
@@ -248,17 +248,9 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
                 "queue1-i3": {
                     "instances": [
                         {
-                            "instance_type": "t3.small",
-                        },
-                        {
-                            "instance_type": "t3a.small",
-                        },
-                        {
-                            "instance_type": "t3.medium",
-                        },
-                        {
-                            "instance_type": "t3a.medium",
-                        },
+                            "instance_type": instance_type,
+                        }
+                        for instance_type in spot_instance_types
                     ],
                     "expected_running_instances": 0,
                     "expected_power_saved_instances": 10,
@@ -354,6 +346,7 @@ def test_update_slurm(region, pcluster_config_reader, s3_bucket_factory, cluster
         resource_bucket=bucket_name,
         additional_policy_arn=additional_policy_arn,
         postupdate_script="failed_postupdate.sh",
+        spot_instance_types=spot_instance_types,
     )
     cluster.update(str(failed_update_config_file), raise_on_error=False, log_error=False)
 
