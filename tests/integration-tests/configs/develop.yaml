@@ -17,8 +17,8 @@ test-suites:
   basic:
     test_essential_features.py::test_essential_features:
       dimensions:
-        - regions: ["af-south-1"]
-          instances: {{ common.INSTANCES_DEFAULT_X86 }}
+        - regions: [{{ US_EAST_1_INSTANCE_TYPE_0_AZ }}]
+          instances: [{{ US_EAST_1_INSTANCE_TYPE_0 }}.xlarge]
           oss: [{{ OS_X86_1 }}]
           schedulers: ["slurm"]
   capacity_reservations:
@@ -288,8 +288,8 @@ test-suites:
   health_checks:
     test_gpu_health_checks.py::test_cluster_with_gpu_health_checks:
       dimensions:
-        - regions: ["eu-west-1"]
-          instances: {{ common.INSTANCES_DEFAULT_X86 }}
+        - regions: [{{ EU_WEST_1_GPU_INSTANCE_TYPE_0_AZ }}]
+          instances: [{{ EU_WEST_1_GPU_INSTANCE_TYPE_0 }}.xlarge]
           oss: [{{ OS_X86_5 }}]
           schedulers: ["slurm"]
   iam:

@@ -76,7 +76,11 @@ def test_cluster_with_gpu_health_checks(
             ),
         },
     }
-    cluster_config = pcluster_config_reader()
+    if architecture == "x86_64":
+        non_gpu_instance = "c5.xlarge"
+    else:
+        non_gpu_instance = "m6g.xlarge"
+    cluster_config = pcluster_config_reader(non_gpu_instance=non_gpu_instance)
     cluster = clusters_factory(cluster_config)
     assert_head_node_is_running(region, cluster)
     remote_command_executor = RemoteCommandExecutor(cluster)

@@ -13,6 +13,7 @@ import logging
 import os
 from datetime import date
 
+import boto3
 import yaml
 from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
@@ -60,6 +61,94 @@ def _get_os_parameters(config=None, args=None):
     return result
 
 
+def _get_instance_type_parameters():  # noqa: C901
+    """Gets Instance jinja parameters."""
+    result = {}
+    excluded_instance_type_prefixes = [
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "t1",
+        "t2",
+        "c1",
+        "c3",
+        "c4",
+        "r3",
+        "r4",
+        "x1",
+        "x1e",
+        "d2",
+        "h1",
+        "i2",
+        "i3",
+        "f1",
+        "g3",
+        "p2",
+        "p3",
+    ]
+    for region in ["us-east-1", "us-west-2", "eu-west-1"]:  # Only populate instance type for big regions
+        ec2_client = boto3.client("ec2", region_name=region)
+        # The following conversion is required becase Python jinja doesn't like "-"
+        region_jinja = region.replace("-", "_").upper()
+        try:
+            xlarge_instances = []
+            instance_type_availability_zones = {}
+            # Use describe_instance_types with pagination
+            paginator = ec2_client.get_paginator("describe_instance_type_offerings")
+
+            for page in paginator.paginate(LocationType="availability-zone"):
+                for instance_type in page["InstanceTypeOfferings"]:
+                    # Check if instance type ends with '.xlarge'
+                    if instance_type["InstanceType"].endswith(".xlarge") and not any(
+                        instance_type["InstanceType"].startswith(prefix) for prefix in excluded_instance_type_prefixes
+                    ):
+                        xlarge_instances.append(instance_type["InstanceType"])
+                        if instance_type_availability_zones.get(instance_type["InstanceType"]):
+                            instance_type_availability_zones[instance_type["InstanceType"]].append(
+                                instance_type["Location"]
+                            )
+                        else:
+                            instance_type_availability_zones[instance_type["InstanceType"]] = [
+                                instance_type["Location"]
+                            ]
+
+            xlarge_instances = list(set(xlarge_instances))  # Remove redundancy.
+            gpu_instances = []
+            paginator = ec2_client.get_paginator("describe_instance_types")
+            for page in paginator.paginate(InstanceTypes=xlarge_instances):
+                for instance_type in page["InstanceTypes"]:
+                    if instance_type.get("GpuInfo"):
+                        gpu_instances.append(instance_type["InstanceType"])
+
+            xlarge_instances.sort()
+            gpu_instances.sort()
+            today_number = (date.today() - date(2020, 1, 1)).days
+            for index in range(len(xlarge_instances)):
+                instance_type = xlarge_instances[(today_number + index) % len(xlarge_instances)]
+                result[f"{region_jinja}_INSTANCE_TYPE_{index}"] = instance_type[: -len(".xlarge")]
+                availability_zones = instance_type_availability_zones[instance_type]
+                result[f"{region_jinja}_INSTANCE_TYPE_{index}_AZ"] = (
+                    availability_zones[0] if len(availability_zones) <= 2 else region
+                )
+            for index in range(len(gpu_instances)):
+                instance_type = gpu_instances[(today_number + index) % len(gpu_instances)]
+                result[f"{region_jinja}_GPU_INSTANCE_TYPE_{index}"] = instance_type[: -len(".xlarge")]
+                availability_zones = instance_type_availability_zones[instance_type]
+                result[f"{region_jinja}_GPU_INSTANCE_TYPE_{index}_AZ"] = (
+                    availability_zones[0] if len(availability_zones) <= 2 else region
+                )
+        except Exception as e:
+            print(f"Error getting instance types: {str(e)}. Using c5 and g4dn as the default instance type")
+            for index in range(100):
+                result[f"{region_jinja}_INSTANCE_TYPE_{index}"] = "c5"
+                result[f"{region_jinja}_INSTANCE_TYPE_{index}_AZ"] = region
+            for index in range(10):
+                result[f"{region_jinja}_GPU_INSTANCE_TYPE_{index}"] = "g4dn"
+                result[f"{region_jinja}_GPU_INSTANCE_TYPE_{index}_AZ"] = region
+    return result
+
+
 def _get_available_amis_oss(architecture, args=None, config=None):
     """
     Gets available AMIs for given architecture from input.
@@ -97,7 +186,9 @@ def read_config_file(config_file, print_rendered=False, config=None, args=None, 
     :return: a dict containig the parsed config file
     """
     logging.info("Parsing config file: %s", config_file)
-    rendered_config = _render_config_file(config_file, **kwargs, **_get_os_parameters(config=config, args=args))
+    rendered_config = _render_config_file(
+        config_file, **kwargs, **_get_os_parameters(config=config, args=args), **_get_instance_type_parameters()
+    )
     try:
         return yaml.safe_load(rendered_config)
     except Exception:
