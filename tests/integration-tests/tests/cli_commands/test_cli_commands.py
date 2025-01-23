@@ -45,7 +45,7 @@ def test_slurm_cli_commands(
     # Use long scale down idle time so we know nodes are terminated by pcluster stop
     cluster_config = pcluster_config_reader(scaledown_idletime=60)
 
-    if "alinux" not in os and "us-iso" in region:  # The code does not know non-amazon vanilla AMIs IDs in iso regions
+    if "alinux" in os or "us-iso" not in region:  # The code does not know non-amazon vanilla AMIs IDs in iso regions
         # Using custom AMI not tagged by pcluser will generate a warning
         custom_ami = retrieve_latest_ami(region, os, ami_type="official", architecture="x86_64")
         config_file = "pcluster.config.with.warnings.yaml"
@@ -59,7 +59,7 @@ def test_slurm_cli_commands(
     _test_describe_cluster(cluster)
     _test_list_cluster(cluster.name, "CREATE_COMPLETE")
 
-    if "alinux" not in os and "us-iso" in region:
+    if "alinux" in os or "us-iso" not in region:
         _test_update_with_warnings(cluster_config_with_warning, cluster)
     check_status(cluster, "CREATE_COMPLETE", "running", "RUNNING")
 
